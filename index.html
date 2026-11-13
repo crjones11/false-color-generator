@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>False Color Generator</title>
+<style>
+:root{--bg:#121315;--panel:#1b1d21;--line:#2c3037;--text:#e8e9ec;--dim:#9aa0aa;--accent:#e5484d;--ok:#3fb26b;--warn:#e0a83a;--field:#0f1012}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+header{padding:18px 24px 6px;max-width:1240px;margin:0 auto}
+h1{font-size:20px;margin:0;letter-spacing:.2px}
+header p{margin:4px 0 0;color:var(--dim)}
+main{display:grid;grid-template-columns:minmax(320px,440px) 1fr;gap:20px;max-width:1240px;margin:0 auto;padding:14px 24px 40px}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);margin:0 0 10px;font-weight:600}
+label{display:block;font-size:12px;color:var(--dim);margin-bottom:3px}
+input,select{width:100%;background:var(--field);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px 9px;font:inherit}
+input:focus,select:focus{outline:2px solid #4a7dff;outline-offset:-1px}
+input.bad{border-color:var(--accent)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.row.one{grid-template-columns:1fr}
+.hint{font-size:12px;color:var(--dim);margin:-4px 0 10px}
+.check{display:flex;gap:8px;align-items:flex-start;margin:6px 0;color:var(--text);font-size:13px}
+.check input{width:auto;margin-top:3px}
+button{font:inherit;border-radius:7px;border:1px solid var(--line);background:#262a30;color:var(--text);padding:8px 12px;cursor:pointer}
+button:hover{background:#30353d}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;padding:11px 16px;width:100%}
+button.primary:disabled{opacity:.45;cursor:not-allowed}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:10px;margin-left:6px}
+.badge.ok{background:#173d27;color:#7be0a1}.badge.warn{background:#44340f;color:#f1c66b}
+#errors{color:#ff9a9d;font-size:13px;margin:0;padding-left:18px}
+#errors:empty{display:none}
+#status{font-size:13px;color:var(--dim);margin-top:8px;min-height:18px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tabs button.on{background:#3a4150;border-color:#56607a}
+.preview{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:start}
+@media(max-width:560px){.preview{grid-template-columns:110px 1fr}}
+.stripwrap{position:relative;height:560px;margin-left:44px}
+.strip{position:absolute;inset:0;border:1px solid #000;border-radius:3px;overflow:hidden;background:#000}
+.strip div{position:absolute;left:0;right:0}
+.tick{position:absolute;left:-44px;width:40px;text-align:right;font-size:11px;color:var(--dim);transform:translateY(50%)}
+.tick::after{content:"";position:absolute;right:-5px;top:50%;width:4px;border-top:1px solid var(--dim)}
+.mark{position:absolute;left:0;right:-8px;border-top:1px dashed #fff;pointer-events:none}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--dim);font-weight:600;font-size:12px}
+.sw{display:inline-block;width:26px;height:13px;border-radius:2px;border:1px solid #000;vertical-align:middle}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.big{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:12px}
+.big div b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.big div span{font-size:12px;color:var(--dim)}
+details summary{cursor:pointer;color:var(--dim);font-size:13px;margin-bottom:8px}
+.note{font-size:12px;color:var(--dim);margin:8px 0 0}
+.warnbox{background:#3a2e10;border:1px solid #6b5418;color:#f1d48a;border-radius:6px;padding:7px 10px;font-size:12px;margin-top:8px}
+.warnbox:empty{display:none}
+.sheet{display:grid;grid-template-columns:1fr 1fr;gap:8px;font:11px/1.5 ui-monospace,Menlo,Consolas,monospace;color:#c9ccd3}
+.sh{background:#0f1012;border:1px solid var(--line);border-radius:6px;padding:8px 9px;overflow-wrap:anywhere}
+.sh b{font-family:-apple-system,"Segoe UI",sans-serif;color:var(--text)}
+.sh mark{background:#5a4a10;color:#ffe08a;padding:0 3px;border-radius:3px}
+.sh i,.n{display:inline-block;font-style:normal;font:700 10px/15px -apple-system,sans-serif;width:15px;height:15px;text-align:center;border-radius:50%;background:var(--accent);color:#fff;margin:0 3px}
+.pair{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}.pair span{color:var(--dim)}
+[hidden]{display:none!important}
+details.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-bottom:14px}
+details.box>summary{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.9px;font-weight:600}
+details.box[open]>summary{margin-bottom:12px}
+details.box h3{font-size:12px;color:var(--dim);margin:16px 0 8px;font-weight:600;border-top:1px solid var(--line);padding-top:12px}
+textarea{width:100%;height:150px;background:var(--field);border:1px solid var(--line);color:#c9ccd3;border-radius:6px;padding:8px;font:11px/1.4 ui-monospace,Menlo,Consolas,monospace;resize:vertical}
+#camInfo{white-space:pre-line}
+footer{max-width:1240px;margin:0 auto;padding:0 24px 36px;color:var(--dim);font-size:12px;line-height:1.6}
+footer a{color:#b9c2d6}
+.pz{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px}.pz .tabs{margin:0}
+.pz label{margin:0;font-size:13px;color:var(--text)}.pz input{width:70px;display:inline-block;margin:0 4px;padding:5px 7px}
+.hd{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.coffee-btn{margin-left:auto;font-weight:700;letter-spacing:.5px;font-size:12px;text-transform:uppercase;text-decoration:none;color:#f2c94c;border:1px solid #f2c94c;padding:6px 12px;border-radius:4px;white-space:nowrap}
+.coffee-btn:hover{background:rgba(242,201,76,.12)}.coffee-btn:active{opacity:.85}
+</style>
+</head>
+<body>
+<header>
+  <div class="hd"><h1>False Color Generator</h1>
+  <a href="https://venmo.com/codyjonescolor" target="_blank" rel="noopener" class="coffee-btn" title="Tip the developer via Venmo">&#9749; Buy me a coffee</a></div>
+  <p>Clip-anchored false color LUTs from a camera profile. Warm colors count down to clip, cool colors count up from the noise floor.</p>
+</header>
+<main>
+<div>
+  <section>
+    <h2>Camera</h2>
+    <div class="row one"><div><label for="camSel">Camera system</label><select id="camSel"></select></div></div>
+    <div class="row">
+      <div id="circWrap"><label for="circSel">Native ISO circuit</label><select id="circSel"></select></div>
+      <div><label for="isoList">ISOs to export</label><input id="isoList" placeholder="800, 1600"></div>
+    </div>
+    <p class="note" id="camInfo"></p>
+    <div class="warnbox" id="curveNote"></div>
+  </section>
+
+  <section>
+    <ul id="errors"></ul>
+    <button class="primary" id="exportBtn" type="button">Export LUT set (.zip)</button>
+    <div id="status"></div>
+    <p class="note">Each ISO gets a Full and a Legal LUT. Full is for in-camera slots and devices that scale their own output; Legal has the output colors scaled to 64-940. A report and an OmniScope preset (untested) are included.</p>
+  </section>
+
+  <details class="box">
+    <summary>Options</summary>
+    <div class="row">
+      <div><label for="greyBand">Gray band, plus or minus (stops)</label><input id="greyBand" inputmode="decimal"></div>
+      <div><label for="lutSize">LUT size</label><select id="lutSize"><option value="33">33 (cameras, monitors)</option><option value="65">65 (software)</option><option value="17">17</option></select></div>
+    </div>
+    <label class="check"><input type="checkbox" id="conservativeClip"><span>Start the clip color at the grid point at or below clip, so the warning is never late.</span></label>
+    <label class="check"><input type="checkbox" id="inputLegal"><span>Advanced: the device feeds a legal-range signal into the LUT without expanding it.</span></label>
+  </details>
+
+  <details class="box" id="dataBox">
+    <summary>Camera data (view, edit, or add a camera)</summary>
+    <div class="row">
+      <div><label for="make">Make</label><input id="make" autocomplete="off"></div>
+      <div><label for="model">Model</label><input id="model" autocomplete="off"></div>
+    </div>
+    <div class="row one"><div><label for="curve">Log curve <span id="curveBadge"></span></label><select id="curve"></select></div></div>
+    <div class="row one"><div><label for="baseISO">Base ISO of this circuit</label><input id="baseISO" inputmode="numeric"></div></div>
+    <label class="check"><input type="checkbox" id="isoShifts"><span>Clip point moves with ISO (gray stays put). Confirm with one frame at a non-base ISO.</span></label>
+
+    <h3>From the Imatest sheet (base ISO)</h3>
+    <div class="sheet" aria-hidden="true">
+      <div class="sh"><b>Density response</b><br>48-bit color<br>max=<mark>50880</mark><i>1</i> of 65535<br>Min, max pxls = ...</div>
+      <div class="sh"><b>Dynamic range in f-stops (EV)</b><br>1.0 &nbsp;(Low): &nbsp;<mark>11.5</mark><i>3</i><br>0.5 &nbsp;(Medium): &nbsp;<mark>10.2</mark><i>2</i><br>0.25 (Med-High): 8.91<br>0.1 &nbsp;(High): 6.97</div>
+    </div>
+    <p class="hint" style="margin-top:8px">Type the three highlighted numbers exactly as printed. The app does the math.</p>
+    <div class="row one"><div><label for="clipMax"><span class="n">1</span> "max=" value in the Density response box</label>
+      <div class="pair"><input id="clipMax" inputmode="numeric"><span>of</span><input id="clipOf" inputmode="numeric"></div></div></div>
+    <p class="hint" id="clipCalc"></p>
+    <div class="row">
+      <div><label for="dr2"><span class="n">2</span> "0.5 (Medium)" row</label><input id="dr2" inputmode="decimal"></div>
+      <div><label for="dr1"><span class="n">3</span> "1.0 (Low)" row</label><input id="dr1" inputmode="decimal"></div>
+    </div>
+    <label class="check"><input type="checkbox" id="clipManual"><span>No Imatest sheet for the clip level: enter it as a code value instead.</span></label>
+    <div class="row" id="manualClip" hidden>
+      <div><label for="clipCV">Clip level (10-bit code value)</label><input id="clipCV" inputmode="decimal"></div>
+      <div><label for="clipRange">Read from</label><select id="clipRange"><option value="full">File or Resolve (full range)</option><option value="legal">SDI waveform (legal range)</option></select></div>
+    </div>
+
+    <h3>Metered middle gray (base ISO)</h3>
+    <p class="hint" style="margin:0 0 10px">Meter an 18% gray card, set the camera to the meter, and read the card's level on a 10-bit waveform with no LUT or grade applied.</p>
+    <div class="row">
+      <div><label for="greyCV">Gray card level (code value)</label><input id="greyCV" inputmode="decimal"></div>
+      <div><label for="greyRange">Read from</label><select id="greyRange"><option value="full">File or Resolve (full range)</option><option value="legal">SDI waveform (legal range)</option></select></div>
+    </div>
+
+    <h3>Database entry for this circuit</h3>
+    <textarea id="dbEntry" readonly spellcheck="false"></textarea>
+    <div class="btns" style="margin-top:8px">
+      <button type="button" id="copyEntry">Copy entry</button>
+      <button type="button" id="importBtn">Load profile.json</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+  </details>
+</div>
+
+<div>
+  <section>
+    <h2>Preview</h2>
+    <div class="pz">
+      <div class="tabs" id="tabs"></div>
+      <label for="pictureStops">Picture zone: keep at least
+        <input id="pictureStops" type="number" min="0" max="4" step="0.5"> stops either side of gray as picture</label>
+    </div>
+    <div class="big" id="big"></div>
+    <div class="preview">
+      <div class="stripwrap" id="stripwrap"><div class="strip" id="strip"></div></div>
+      <div><table id="legend"></table><div class="warnbox" id="modelWarn"></div></div>
+    </div>
+  </section>
+  <section>
+    <h2>Headroom by ISO</h2>
+    <table id="headroom"></table>
+    <p class="note">Only the base ISO row is measured. Other rows shift clip and floor by the ISO difference in stops.</p>
+  </section>
+</div>
+</main>
+<footer id="credits"></footer>
+
+<script>
+/* False Color Generator engine. Pure functions, no DOM.
+   One zone table per camera profile + ISO drives the preview, the report and the LUT. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.FCG = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const log10 = Math.log10, log2 = Math.log2;
+
+  // ---- Log curves. enc: scene linear (0.18 = 18% gray) -> 0..1 full range. lin: inverse. ----
+  const logc4 = (() => {
+    const a = (Math.pow(2, 18) - 16) / 117.45, b = (1023 - 95) / 1023, c = 95 / 1023;
+    const s = (7 * Math.LN2 * Math.pow(2, 7 - 14 * c / b)) / (a * b);
+    const t = (Math.pow(2, 14 * (-c / b) + 6) - 64) / a;
+    return {
+      enc: x => x >= t ? (log2(a * x + 64) - 6) / 14 * b + c : (x - t) / s,
+      lin: y => y >= 0 ? (Math.pow(2, 14 * (y - c) / b + 6) - 64) / a : y * s + t
+    };
+  })();
+
+  const CURVES = {
+    log3g10: {
+      name: 'RED Log3G10', short: 'Log3G10', verified: true,
+      note: 'Checked against Nikon ZR frames at four ISOs.',
+      enc: x => { const v = x + 0.01; return v < 0 ? v * 15.1927 : 0.224282 * log10(v * 155.975327 + 1); },
+      lin: y => y < 0 ? y / 15.1927 - 0.01 : (Math.pow(10, y / 0.224282) - 1) / 155.975327 - 0.01
+    },
+    logc3: {
+      name: 'ARRI LogC3 (EI 800)', short: 'LogC3', verified: false,
+      note: 'EI 800 constants only. LogC3 uses different constants at other EIs.',
+      enc: x => x > 0.010591 ? 0.247190 * log10(5.555556 * x + 0.052272) + 0.385537 : 5.367655 * x + 0.092809,
+      lin: y => y > 5.367655 * 0.010591 + 0.092809 ? (Math.pow(10, (y - 0.385537) / 0.247190) - 0.052272) / 5.555556 : (y - 0.092809) / 5.367655
+    },
+    logc4: { name: 'ARRI LogC4', short: 'LogC4', verified: false, note: '', enc: logc4.enc, lin: logc4.lin },
+    slog3: {
+      name: 'Sony S-Log3', short: 'SLog3', verified: false, note: '',
+      enc: x => x >= 0.01125 ? (420 + log10((x + 0.01) / 0.19) * 261.5) / 1023 : (x * (171.2102946929 - 95) / 0.01125 + 95) / 1023,
+      lin: y => y >= 171.2102946929 / 1023 ? Math.pow(10, (y * 1023 - 420) / 261.5) * 0.19 - 0.01 : (y * 1023 - 95) * 0.01125 / (171.2102946929 - 95)
+    },
+    bmdgen5: {
+      name: 'Blackmagic Film Gen 5', short: 'BMDFilmG5', verified: false, note: '',
+      enc: x => x >= 0.005 ? 0.08692876065 * Math.log(x + 0.005494072432) + 0.5300133392 : 8.283605932 * x + 0.09246575342,
+      lin: y => y >= 8.283605932 * 0.005 + 0.09246575342 ? Math.exp((y - 0.5300133392) / 0.08692876065) - 0.005494072432 : (y - 0.09246575342) / 8.283605932
+    }
+  };
+
+  // ---- Range helpers (10-bit code values) ----
+  const fullToLegalCV = cv => 64 + cv * 876 / 1023;
+  const legalToFullCV = cv => (cv - 64) * 1023 / 876;
+
+  // ---- Palette ----
+  const PALETTE = {
+    clip: '#ff0000',
+    hi: ['#ff7a00', '#ffd000', '#fff27a', '#ffcfa8', '#ffa6c9', '#e07aa8', '#c9a27a', '#a8875f'],
+    grey: '#00b050',
+    lo: ['#1e3fff', '#00a2ff', '#00d5e0', '#5fe0b8', '#8fd3c8', '#b7c9e8', '#c9c0e8', '#d8d0f0'],
+    caution: '#7a2cff',
+    noise: '#3a0066'
+  };
+  const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+
+  // ---- Profile validation ----
+  function validate(p) {
+    const e = [];
+    const num = (v, name, lo, hi) => { if (!(typeof v === 'number' && isFinite(v)) || v < lo || v > hi) e.push(`${name} must be between ${lo} and ${hi}.`); };
+    if (!CURVES[p.curve]) e.push('Unknown log curve.');
+    num(p.baseISO, 'Base ISO', 25, 409600);
+    num(p.clipCV, 'Clip level', 1, 1023);
+    num(p.greyCV, 'Middle gray', 1, 1022);
+    num(p.dr2, 'Range at SNR 2', 1, 20);
+    num(p.dr1, 'Range at SNR 1', 1, 20);
+    num(p.greyBand, 'Gray band half-width', 0.02, 1);
+    if (p.pictureStops != null) num(p.pictureStops, 'Picture zone', 0, 4);
+    if (e.length) return e;
+    if (p.greyCV >= p.clipCV) e.push('Middle gray must be below the clip level.');
+    if (p.dr1 < p.dr2) e.push('Range at SNR 1 must be at least the range at SNR 2.');
+    if (!Array.isArray(p.isoList) || !p.isoList.length || p.isoList.some(i => !(i >= 25 && i <= 409600))) e.push('ISO list must contain at least one valid ISO.');
+    if (![17, 33, 65].includes(p.lutSize)) e.push('LUT size must be 17, 33 or 65.');
+    return e;
+  }
+
+  // ---- Zone model for one ISO ----
+  function buildModel(p, iso) {
+    const C = CURVES[p.curve];
+    const shift = p.isoShifts ? log2(iso / p.baseISO) : 0;
+    const k = Math.pow(2, shift);
+    const baseClipLin = C.lin(p.clipCV / 1023);
+    const clipLin = baseClipLin * k;
+    const greyLin = C.lin(p.greyCV / 1023);
+    const floor2Lin = baseClipLin / Math.pow(2, p.dr2) * k;
+    const floor1Lin = baseClipLin / Math.pow(2, p.dr1) * k;
+    const clipEnc = C.enc(clipLin);
+    const over = log2(clipLin / greyLin);
+    const under2 = log2(greyLin / floor2Lin);
+    const under1 = log2(greyLin / floor1Lin);
+    const band = p.greyBand;
+    // Keep at least `pic` stops either side of gray as picture (never less than the gray band itself).
+    const pic = Math.max(band, p.pictureStops == null ? 1 : p.pictureStops);
+    const nHi = Math.max(0, Math.min(PALETTE.hi.length, Math.floor(over - pic + 1e-9)));
+    const nLo = Math.max(0, Math.min(PALETTE.lo.length, Math.floor(under2 - pic + 1e-9)));
+    const cv = l => C.enc(l) * 1023;
+    const zones = [];
+    const add = (kind, n, label, loLin, hiLin, color) => zones.push({ kind, n, label, loLin, hiLin, loCV: loLin === -Infinity ? 0 : cv(loLin), hiCV: hiLin === Infinity ? 1023 : cv(hiLin), color });
+    add('clip', 0, 'Clipped', clipLin, Infinity, PALETTE.clip);
+    for (let i = 1; i <= nHi; i++) add('hi', i, `${i - 1} to ${i} stop${i > 1 ? 's' : ''} below clip`, clipLin / Math.pow(2, i), clipLin / Math.pow(2, i - 1), PALETTE.hi[i - 1]);
+    const gUp = greyLin * Math.pow(2, band), gDn = greyLin / Math.pow(2, band);
+    const midTop = clipLin / Math.pow(2, nHi), midBot = floor2Lin * Math.pow(2, nLo);
+    if (midTop > gUp) add('mid', 0, 'Picture (above gray)', gUp, midTop, null);
+    add('grey', 0, 'Middle gray', Math.max(gDn, midBot), Math.min(gUp, midTop), PALETTE.grey);
+    if (gDn > midBot) add('mid', 1, 'Picture (below gray)', midBot, gDn, null);
+    for (let i = nLo; i >= 1; i--) add('lo', i, `${i - 1} to ${i} stop${i > 1 ? 's' : ''} above floor`, floor2Lin * Math.pow(2, i - 1), floor2Lin * Math.pow(2, i), PALETTE.lo[i - 1]);
+    add('caution', 0, 'Noisy (SNR 1 to 2)', floor1Lin, floor2Lin, PALETTE.caution);
+    add('noise', 0, 'Below noise floor', -Infinity, floor1Lin, PALETTE.noise);
+    return {
+      iso, shift, curve: C, clipLin, greyLin, floor2Lin, floor1Lin, clipEnc,
+      clipCV: clipEnc * 1023, clipOutOfRange: clipEnc > 1,
+      greyCV: p.greyCV, floor2CV: cv(floor2Lin), floor1CV: cv(floor1Lin),
+      over, under2, under1, band, nHi, nLo, zones
+    };
+  }
+
+  // Clip threshold actually used in a LUT of a given size. Conservative: the lattice point at or below clip.
+  function clipThreshold(model, size, conservative) {
+    const c = Math.min(model.clipEnc, 1);
+    if (!conservative) return c;
+    return Math.floor(c * (size - 1) + 1e-9) / (size - 1);
+  }
+
+  // Classify one pixel. r,g,b are full-range encoded 0..1. Returns [r,g,b] 0..1 (full-range color).
+  function classify(model, r, g, b, clipThreshEnc) {
+    const C = model.curve;
+    const m = Math.max(r, g, b);
+    if (m >= clipThreshEnc) return ZC.clip;
+    const mLin = C.lin(m);
+    if (model.nHi > 0 && mLin > 0) {
+      const h = log2(model.clipLin / mLin);
+      if (h < model.nHi) return ZC.hi[Math.max(0, Math.floor(h))];
+    }
+    const Y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const yLin = C.lin(Y);
+    if (yLin < model.floor1Lin) return ZC.noise;
+    if (yLin < model.floor2Lin) return ZC.caution;
+    const u = log2(yLin / model.floor2Lin);
+    if (u < model.nLo) return ZC.lo[Math.floor(u)];
+    if (Math.abs(log2(yLin / model.greyLin)) <= model.band) return ZC.grey;
+    const v = Math.min(1, Math.max(0, Y));
+    return [v, v, v];
+  }
+  const ZC = {
+    clip: hexToRgb(PALETTE.clip), hi: PALETTE.hi.map(hexToRgb), grey: hexToRgb(PALETTE.grey),
+    lo: PALETTE.lo.map(hexToRgb), caution: hexToRgb(PALETTE.caution), noise: hexToRgb(PALETTE.noise)
+  };
+
+  // ---- .cube writer ----
+  // opts: {size, output:'full'|'legal', inputLegal:boolean, conservativeClip:boolean, title, comments:[]}
+  function makeCube(model, opts) {
+    const N = opts.size, legalOut = opts.output === 'legal';
+    const thresh = clipThreshold(model, N, opts.conservativeClip);
+    const inMap = opts.inputLegal ? (x => (x * 1023 - 64) / 876) : (x => x);
+    const axis = new Float64Array(N);
+    for (let i = 0; i < N; i++) axis[i] = inMap(i / (N - 1));
+    const out = [];
+    (opts.comments || []).forEach(c => out.push('# ' + c));
+    out.push(`TITLE "${(opts.title || 'False Color').replace(/"/g, '')}"`);
+    out.push(`LUT_3D_SIZE ${N}`);
+    const f = v => (legalOut ? (64 + 876 * v) / 1023 : v).toFixed(6);
+    for (let bi = 0; bi < N; bi++) for (let gi = 0; gi < N; gi++) for (let ri = 0; ri < N; ri++) {
+      const c = classify(model, axis[ri], axis[gi], axis[bi], thresh);
+      out.push(f(c[0]) + ' ' + f(c[1]) + ' ' + f(c[2]));
+    }
+    return out.join('\n') + '\n';
+  }
+
+
+  // ---- Nobe OmniScope false color preset (.tfc4). Luma only; pos is percent of the 0-1023 scale. ----
+  function makeTfc4(model) {
+    const EPS = 0.001, s = v => String(Math.round(v * 1e7) / 1e7);
+    const zs = model.zones.slice().reverse().map(z => ({ lo: Math.max(0, z.loCV) / 1023 * 100, color: z.color ? hexToRgb(z.color) : [0.5, 0.5, 0.5], gs: !z.color }))
+      .filter((z, i, a) => i === a.length - 1 || a[i + 1].lo > z.lo + 2 * EPS).filter(z => z.lo < 100 - 2 * EPS);
+    const ent = (pos, z, locked) => ({ pos: s(pos), locked: locked ? 'true' : 'false', rgba: { r: s(z.color[0]), g: s(z.color[1]), b: s(z.color[2]), a: '1' }, grayscale_up: String(z.gs && !locked), grayscale_down: String(z.gs && !locked), sharp_up: 'true', sharp_down: 'true' });
+    const ranges = [ent(0, zs[0], true)];
+    zs.forEach((z, i) => { if (i > 0) { ranges.push(ent(z.lo - EPS, zs[i - 1])); ranges.push(ent(z.lo, z)); } });
+    const last = zs[zs.length - 1];
+    ranges.push(ent(100 - EPS, last)); ranges.push(ent(100, last, true));
+    return JSON.stringify({ mode: '0', opacity: '1', blur: '0', use_custom_range: 'false', custom_min_rgba: { r: '0', g: '0', b: '1', a: '1' }, custom_max_rgba: { r: '1', g: '0.800000012', b: '0.200000003', a: '1' }, custom_min: '40', custom_max: '70', scale_type: '0', ranges }, null, 4);
+  }
+
+  // ---- File naming ----
+  const clean = s => String(s || '').trim().replace(/[^A-Za-z0-9.+-]+/g, '_').replace(/^_+|_+$/g, '') || 'Camera';
+  function fileBase(p, iso) { return `${clean(p.make)}_${clean(p.model)}_${CURVES[p.curve].short}_ISO${iso}_FalseColor`; }
+
+  // ---- Report ----
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function makeReport(p, models, opts) {
+    const C = CURVES[p.curve], f1 = v => v.toFixed(1), f0 = v => Math.round(v);
+    const rows = models.map(m => {
+      const t = clipThreshold(m, p.lutSize, opts.conservativeClip) * 1023;
+      const early = Math.log2(m.clipLin / C.lin(t / 1023));
+      return `<tr><td>${m.iso}</td><td>${m.clipOutOfRange ? 'above 1023' : f0(m.clipCV)}</td><td>+${f1(m.over)}</td><td>${f1(m.under2)}</td><td>${f1(m.under1)}</td><td>${f0(t)} (${early.toFixed(2)} stop early)</td></tr>`;
+    }).join('');
+    const legend = models.map(m => `<h3>ISO ${m.iso}</h3><table><tr><th></th><th>Zone</th><th>Code values (full)</th><th>On a legal SDI waveform</th></tr>` +
+      m.zones.map(z => `<tr><td><span class="sw" style="background:${z.color || 'linear-gradient(#bbb,#555)'}"></span></td><td>${esc(z.label)}</td><td>${f0(Math.max(0, z.loCV))} to ${f0(Math.min(1023, z.hiCV))}</td><td>${f0(fullToLegalCV(Math.max(0, z.loCV)))} to ${f0(fullToLegalCV(Math.min(1023, z.hiCV)))}</td></tr>`).join('') + '</table>').join('');
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>False color report: ${esc(p.make)} ${esc(p.model)}</title>
+<style>body{font:14px/1.5 -apple-system,Segoe UI,sans-serif;max-width:860px;margin:32px auto;padding:0 16px;color:#111}table{border-collapse:collapse;margin:8px 0 20px}td,th{border:1px solid #ccc;padding:4px 10px;text-align:left}th{background:#f1f1f1}.sw{display:inline-block;width:28px;height:14px;border:1px solid #888}.w{background:#fff6d6;border:1px solid #e0c060;padding:8px 12px}</style></head><body>
+<h1>False color report</h1>
+<p><b>${esc(p.make)} ${esc(p.model)}</b>, ${esc(C.name)}, base ISO ${p.baseISO}. Generated ${esc(opts.date || '')}.</p>
+${C.verified ? '' : '<p class="w">The formula for this log curve has not yet been checked against the manufacturer\'s document. Verify zone positions before relying on these LUTs.</p>'}
+<h2>Profile</h2>
+<table><tr><th>Clip level at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Metered middle gray</th><td>${f0(p.greyCV)}</td></tr><tr><th>Range below clip at SNR 2</th><td>${p.dr2} stops</td></tr><tr><th>Range below clip at SNR 1</th><td>${p.dr1} stops</td></tr><tr><th>Clip moves with ISO</th><td>${p.isoShifts ? 'Yes' : 'No'}</td></tr><tr><th>Gray band</th><td>plus or minus ${p.greyBand.toFixed(2)} stop</td></tr><tr><th>Picture zone</th><td>at least ${(p.pictureStops == null ? 1 : p.pictureStops)} stop(s) either side of gray</td></tr></table>
+<h2>Headroom by ISO</h2>
+<table><tr><th>ISO</th><th>Clip (code value)</th><th>Stops over gray</th><th>Stops under gray to SNR 2</th><th>to SNR 1</th><th>Clip color starts at (${p.lutSize}-point LUT)</th></tr>${rows}</table>
+<p>Only the base ISO row uses measured values. Other ISOs are calculated by shifting clip and floor by the ISO difference in stops.</p>
+<h2>How to read the LUT</h2>
+<ul><li>Warm colors count down from clip, judged on the brightest of the three channels.</li><li>Cool colors count up from the SNR 2 noise floor, judged on luma.</li><li>Green is metered middle gray. Between the colored zones the picture shows in gray.</li><li>Each LUT is valid for one ISO only. Using a higher-ISO LUT at a lower ISO setting can hide clipping.</li></ul>
+<h2>Files</h2>
+<ul><li><b>Full</b>: for an in-camera LUT slot, or any device that scales its own output.</li><li><b>OmniScope (.tfc4)</b>: preset for the Nobe OmniScope false color scope. It works on luma only, so it cannot flag a single clipped channel the way the LUT does.</li><li><b>Legal</b>: same LUT with output colors scaled to 64-940, for a device that writes LUT output straight to SDI.</li>${opts.inputLegal ? '<li>These LUTs were built for a legal-scaled input signal that the device does not expand.</li>' : ''}</ul>
+<h2>Range check before trusting it on set</h2>
+<ol><li>Load the LUT and point the camera at a light source so part of the frame clips.</li><li>The red clip color should cover the same area as the camera's own clip indicator or 100% zebra.</li><li>If red never appears, or appears far too early, the device and the LUT disagree on full versus legal range. Try the other file.</li></ol>
+<h2>Zones</h2>${legend}
+${p.credit ? `<p>Dynamic range measurements from the <a href="${esc(p.credit.url)}">${esc(p.credit.org)} ${esc(p.credit.title)}</a>, tested by ${esc(p.credit.tester)}. Middle gray and ISO behavior measured separately.</p>` : ''}</body></html>`;
+  }
+
+  // ---- Minimal store-only ZIP ----
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function makeZip(files) { // files: [{name, text}]
+    const te = new TextEncoder(), parts = [], central = []; let offset = 0;
+    const u16 = v => [v & 255, (v >>> 8) & 255], u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+    for (const f of files) {
+      const name = te.encode(f.name), data = te.encode(f.text), crc = crc32(data);
+      const local = new Uint8Array([0x50, 0x4B, 3, 4, ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(name.length), ...u16(0)]);
+      parts.push(local, name, data);
+      central.push(new Uint8Array([0x50, 0x4B, 1, 2, ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(name.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(offset)]), name);
+      offset += local.length + name.length + data.length;
+    }
+    const cSize = central.reduce((s, a) => s + a.length, 0);
+    const end = new Uint8Array([0x50, 0x4B, 5, 6, ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cSize), ...u32(offset), ...u16(0)]);
+    const all = [...parts, ...central, end], total = all.reduce((s, a) => s + a.length, 0), out = new Uint8Array(total);
+    let o = 0; for (const a of all) { out.set(a, o); o += a.length; }
+    return out;
+  }
+
+  // ---- Full export: one Full and one Legal LUT per ISO, report, profile ----
+  function exportAll(p, opts) {
+    opts = opts || {};
+    const errs = validate(p); if (errs.length) throw new Error(errs.join(' '));
+    const models = p.isoList.map(iso => buildModel(p, iso));
+    const files = [], folder = `${clean(p.make)}_${clean(p.model)}_${CURVES[p.curve].short}_FalseColor`;
+    for (const m of models) for (const output of ['full', 'legal']) {
+      const base = fileBase(p, m.iso), tag = output === 'full' ? 'Full' : 'Legal';
+      files.push({
+        name: `${folder}/${base}_${tag}_${p.lutSize}.cube`,
+        text: makeCube(m, {
+          size: p.lutSize, output, inputLegal: !!p.inputLegal, conservativeClip: p.conservativeClip !== false,
+          title: `${base}_${tag}`,
+          comments: [`False Color Generator`, `${p.make} ${p.model} | ${CURVES[p.curve].name} | ISO ${m.iso} only`,
+            `clip ${Math.round(m.clipCV)} gray ${Math.round(m.greyCV)} (10-bit full range) | +${m.over.toFixed(1)} stops over gray`,
+            `input ${p.inputLegal ? 'legal (unexpanded)' : 'full'} | output ${output}`]
+        })
+      });
+    }
+    for (const m of models) files.push({ name: `${folder}/${fileBase(p, m.iso)}_OmniScope.tfc4`, text: makeTfc4(m) });
+    files.push({ name: `${folder}/report.html`, text: makeReport(p, models, { date: opts.date, conservativeClip: p.conservativeClip !== false, inputLegal: !!p.inputLegal }) });
+    files.push({ name: `${folder}/profile.json`, text: JSON.stringify(p, null, 2) });
+    return { folder, files, models, zip: makeZip(files) };
+  }
+
+  return { CURVES, PALETTE, validate, buildModel, clipThreshold, classify, makeCube, makeTfc4, makeReport, makeZip, crc32, exportAll, fileBase, fullToLegalCV, legalToFullCV };
+});
+
+</script>
+<script>
+/* Camera database. One entry per camera and recording mode; one circuit per native gain.
+   Numbers are typed as printed on the source documents; the app does the math.
+   clipMax/clipOf: Imatest "max=N of M".  dr2/dr1: Imatest "0.5 (Medium)" and "1.0 (Low)" rows.
+   credit: who measured the dynamic range figures (shown at the bottom of the page and in the report).
+   grayCV: metered 18% gray, 10-bit full-range code value.  isoShifts: clip moves with ISO, gray stays. */
+var FCG_CAMERAS = [
+  {
+    id: 'nikon-zr-r3d', make: 'Nikon', model: 'ZR', mode: 'R3D NE, RED log', curve: 'log3g10',
+    credit: { org: 'CineD', tester: 'Gunther Machu', title: 'Nikon ZR Lab Test', date: '2025-10-23', url: 'https://www.cined.com/nikon-zr-lab-test-rolling-shutter-dynamic-range-and-exposure-latitude/' },
+    circuits: [
+      { name: 'Low base (ISO 800)', baseISO: 800, isos: [800, 1600], isoShifts: true,
+        clipMax: 50880, clipOf: 65535, dr2: 10.2, dr1: 11.5, grayCV: 406,
+        sources: { range: 'CineD lab test, Imatest sheet, ISO 800', gray: 'Metered gray card, R3D frame, 2026-11-12', iso: 'Clip shift confirmed with an ISO 1600 frame' } },
+      { name: 'High base (ISO 6400)', baseISO: 6400, isos: [3200, 6400], isoShifts: true,
+        clipMax: 50880, clipOf: 65535, dr2: 9.16, dr1: 10.9, grayCV: 399,
+        sources: { range: 'CineD lab test, Imatest sheet, ISO 6400', gray: 'Metered gray card, R3D frame, 2026-11-12', iso: 'Clip shift confirmed with an ISO 3200 frame' } }
+    ]
+  }
+];
+if (typeof module === 'object' && module.exports) module.exports = FCG_CAMERAS;
+
+</script>
+<script>
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+const DB = (typeof FCG_CAMERAS !== 'undefined' ? FCG_CAMERAS : []);
+const DEFAULTS = {greyBand:0.17, pictureStops:1, lutSize:33, conservativeClip:true, inputLegal:false};
+const DATA_IDS = ['make','model','curve','baseISO','isoShifts','clipMax','clipOf','dr2','dr1','clipManual','clipCV','clipRange','greyCV','greyRange'];
+const KEY = 'fcg.state.v2';
+let activeISO = null;
+
+for (const [k,c] of Object.entries(FCG.CURVES)) { const o=document.createElement('option'); o.value=k; o.textContent=c.name; $('curve').appendChild(o); }
+DB.forEach((c,i)=>{ const o=document.createElement('option'); o.value=String(i); o.textContent=`${c.make} ${c.model} (${c.mode})`; $('camSel').appendChild(o); });
+{ const o=document.createElement('option'); o.value='custom'; o.textContent='Custom camera'; $('camSel').appendChild(o); }
+
+function fromDB(ci, ki){
+  const c=DB[ci], k=c.circuits[ki];
+  return {credit:c.credit||null, make:c.make, model:c.model, curve:c.curve, baseISO:k.baseISO, isoList:k.isos.slice(), isoShifts:k.isoShifts!==false,
+    clipSource:k.clipMax?'imatest':'cv', clipMax:k.clipMax||null, clipOf:k.clipOf||65535, clipCV:k.clipMax?k.clipMax/(k.clipOf||65535)*1023:k.clipCV, greyCV:k.grayCV, dr2:k.dr2, dr1:k.dr1};
+}
+function fillCircuits(ci){
+  const sel=$('circSel'); sel.textContent='';
+  if(ci==='custom'){ $('circWrap').hidden=true; return; }
+  $('circWrap').hidden=false;
+  DB[ci].circuits.forEach((k,i)=>{ const o=document.createElement('option'); o.value=String(i); o.textContent=k.name; sel.appendChild(o); });
+}
+function selectCamera(ci, ki){
+  $('camSel').value=String(ci); fillCircuits(ci);
+  if(ci==='custom'){ $('dataBox').open=true; update(); return; }
+  $('circSel').value=String(ki||0);
+  setData(fromDB(ci, ki||0));
+}
+function setData(p){
+  $('make').value=p.make||''; $('model').value=p.model||''; $('curve').value=p.curve;
+  $('baseISO').value=p.baseISO; $('isoList').value=(p.isoList||[]).join(', '); $('isoShifts').checked=!!p.isoShifts;
+  const man = p.clipSource==='cv' || !(p.clipMax>0);
+  $('clipManual').checked=man;
+  $('clipMax').value=p.clipMax||''; $('clipOf').value=p.clipOf||65535; $('clipCV').value=Math.round(p.clipCV*10)/10; $('clipRange').value='full';
+  $('greyCV').value=p.greyCV; $('greyRange').value='full'; $('dr2').value=p.dr2; $('dr1').value=p.dr1;
+  activeISO=null; update();
+}
+function setOptions(o){
+  $('greyBand').value=o.greyBand; $('pictureStops').value=o.pictureStops; $('lutSize').value=String(o.lutSize);
+  $('conservativeClip').checked=o.conservativeClip!==false; $('inputLegal').checked=!!o.inputLegal;
+}
+const num = id => { const v=parseFloat($(id).value); return isFinite(v)?v:NaN; };
+function readForm(){
+  const toFull = (v, sel) => $(sel).value==='legal' ? FCG.legalToFullCV(v) : v;
+  const man = $('clipManual').checked, cMax=num('clipMax'), cOf=num('clipOf');
+  const clipCV = man ? toFull(num('clipCV'),'clipRange') : (cOf>0 ? cMax/cOf*1023 : NaN);
+  const ci0=$('camSel').value;
+  return {
+    credit: ci0!=='custom' && DB[ci0] ? (DB[ci0].credit||null) : null,
+    clipSource: man?'cv':'imatest', clipMax: man?null:cMax, clipOf: man?null:cOf,
+    make:$('make').value.trim(), model:$('model').value.trim(), curve:$('curve').value,
+    baseISO:num('baseISO'),
+    isoList:$('isoList').value.split(/[,\s]+/).filter(Boolean).map(Number),
+    isoShifts:$('isoShifts').checked,
+    clipCV, greyCV:toFull(num('greyCV'),'greyRange'), dr2:num('dr2'), dr1:num('dr1'),
+    greyBand:num('greyBand'), pictureStops:num('pictureStops'), lutSize:parseInt($('lutSize').value,10),
+    conservativeClip:$('conservativeClip').checked, inputLegal:$('inputLegal').checked
+  };
+}
+function update(){
+  $('manualClip').hidden = !$('clipManual').checked; $('clipMax').disabled = $('clipOf').disabled = $('clipManual').checked;
+  const p = readForm(), errs = FCG.validate(p), c = FCG.CURVES[p.curve], ci=$('camSel').value;
+  $('clipCalc').textContent = isFinite(p.clipCV) ? `Clip level = code value ${p.clipCV.toFixed(1)} on the 10-bit full-range scale` + (p.clipSource==='imatest' ? ` (${p.clipMax} / ${p.clipOf} x 1023).` : '.') : '';
+  $('curveBadge').innerHTML = c ? (c.verified ? '<span class="badge ok">verified</span>' : '<span class="badge warn">formula unverified</span>') : '';
+  $('curveNote').textContent = c && !c.verified ? ('The ' + c.name + ' formula has not been checked against the manufacturer\'s document yet. ' + (c.note||'')) : '';
+  if(ci!=='custom'){ const k=DB[ci].circuits[$('circSel').value||0], s=k.sources||{}; $('camInfo').textContent = [c?c.name:'', s.range&&('Range: '+s.range), s.gray&&('Gray: '+s.gray), s.iso&&('ISO: '+s.iso)].filter(Boolean).join('\n'); }
+  else $('camInfo').textContent = 'Custom camera: enter its data under "Camera data".';
+  $('dbEntry').value = JSON.stringify({ make:p.make, model:p.model, curve:p.curve, circuit:{ name:`Base ISO ${p.baseISO}`, baseISO:p.baseISO, isos:p.isoList, isoShifts:p.isoShifts,
+    ...(p.clipSource==='imatest' ? {clipMax:p.clipMax, clipOf:p.clipOf} : {clipCV:Math.round(p.clipCV*10)/10}), dr2:p.dr2, dr1:p.dr1, grayCV:Math.round(p.greyCV*10)/10, sources:{range:'', gray:'', iso:''} } }, null, 2);
+  const ul=$('errors'); ul.textContent=''; errs.forEach(e=>{const li=document.createElement('li'); li.textContent=e; ul.appendChild(li);});
+  $('exportBtn').disabled = errs.length>0;
+  if (errs.length) { render(null,null); return; }
+  try { localStorage.setItem(KEY, JSON.stringify({cam:ci, circ:$('circSel').value, profile:p})); } catch(e){}
+  if (!p.isoList.includes(activeISO)) activeISO = p.isoList.includes(p.baseISO) ? p.baseISO : p.isoList[0];
+  render(p, p.isoList.map(i=>FCG.buildModel(p,i)));
+}
+function el(tag, attrs, text){ const e=document.createElement(tag); if(attrs) for(const k in attrs) e.setAttribute(k,attrs[k]); if(text!=null) e.textContent=text; return e; }
+function render(p, models){
+  const tabs=$('tabs'), strip=$('strip'), wrap=$('stripwrap'), legend=$('legend'), head=$('headroom'), big=$('big');
+  tabs.textContent=''; strip.textContent=''; legend.textContent=''; head.textContent=''; big.textContent=''; $('modelWarn').textContent='';
+  wrap.querySelectorAll('.tick,.mark').forEach(n=>n.remove());
+  if(!models){ legend.appendChild(el('tr')).appendChild(el('td',null,'Fix the highlighted values to see the preview.')); return; }
+  models.forEach(m=>{ const b=el('button',{type:'button'},'ISO '+m.iso); if(m.iso===activeISO) b.className='on'; b.onclick=()=>{activeISO=m.iso; render(p,models);}; tabs.appendChild(b); });
+  const m = models.find(x=>x.iso===activeISO) || models[0];
+  const stat=(v,l)=>{ const d=el('div'); d.appendChild(el('b',null,v)); d.appendChild(el('span',null,l)); big.appendChild(d); };
+  stat('+'+m.over.toFixed(1), 'stops over gray to clip'); stat(m.under2.toFixed(1), 'stops under gray to SNR 2'); stat(m.under1.toFixed(1), 'to SNR 1'); stat(m.clipOutOfRange?'>1023':String(Math.round(m.clipCV)), 'clip code value');
+  // strip
+  const pct = cv => Math.min(100, Math.max(0, cv/1023*100));
+  m.zones.forEach(z=>{
+    const lo=pct(z.loCV), hi=pct(z.hiCV); if(hi<=lo) return;
+    const d=el('div'); d.style.bottom=lo+'%'; d.style.height=(hi-lo)+'%';
+    if(z.color) d.style.background=z.color; else { const g=v=>{const n=Math.round(Math.min(1,Math.max(0,v/1023))*255); return `rgb(${n},${n},${n})`;}; d.style.background=`linear-gradient(to top, ${g(z.loCV)}, ${g(z.hiCV)})`; }
+    d.title=z.label; strip.appendChild(d);
+  });
+  for(let cv=0; cv<=1023; cv+= (cv===896?127:128)){ const t=el('div',{class:'tick'},String(cv)); t.style.bottom=pct(cv)+'%'; wrap.appendChild(t); }
+  const thr = FCG.clipThreshold(m, p.lutSize, p.conservativeClip)*1023;
+  if(p.conservativeClip && thr < Math.min(1023,m.clipCV)-0.5){ const mk=el('div',{class:'mark',title:'Clip color starts here in the LUT'}); mk.style.bottom=pct(thr)+'%'; wrap.appendChild(mk); }
+  // legend
+  const hr=el('tr'); ['','Zone','Code values','Stops vs gray'].forEach((h,i)=>hr.appendChild(el('th',i>1?{class:'num'}:null,h))); legend.appendChild(hr);
+  const sv = l => { const s=Math.log2(l/m.greyLin); return (s>=0?'+':'')+s.toFixed(1); };
+  m.zones.forEach(z=>{
+    const tr=el('tr'), td=el('td'), sw=el('span',{class:'sw'}); sw.style.background=z.color||'linear-gradient(#bbb,#555)'; td.appendChild(sw); tr.appendChild(td);
+    tr.appendChild(el('td',null,z.label));
+    tr.appendChild(el('td',{class:'num'}, Math.round(Math.max(0,z.loCV))+' to '+Math.round(Math.min(1023,z.hiCV))));
+    tr.appendChild(el('td',{class:'num'}, (z.loLin===-Infinity?'':sv(z.loLin))+' to '+(z.hiLin===Infinity?'':sv(z.hiLin))));
+    legend.appendChild(tr);
+  });
+  const warns=[];
+  if(m.clipOutOfRange) warns.push('At this ISO the sensor clip lands above code value 1023, so the signal tops out before the clip color can show.');
+  if(p.conservativeClip){ const early=Math.log2(m.clipLin/m.curve.lin(Math.min(1,thr/1023))); if(early>0.01) warns.push(`In the ${p.lutSize}-point LUT the clip color starts at code value ${Math.round(thr)}, about ${early.toFixed(2)} stop early (dashed line).`); }
+  $('modelWarn').textContent=warns.join(' ');
+  // headroom table
+  const h2=el('tr'); ['ISO','Clip','Over gray','Under (SNR 2)','Under (SNR 1)','Floor SNR 2','Floor SNR 1'].forEach((h,i)=>h2.appendChild(el('th',i?{class:'num'}:null,h))); head.appendChild(h2);
+  models.forEach(x=>{ const tr=el('tr'); [String(x.iso)+(x.iso===p.baseISO?' (base)':''), x.clipOutOfRange?'>1023':Math.round(x.clipCV), '+'+x.over.toFixed(1), x.under2.toFixed(1), x.under1.toFixed(1), Math.round(x.floor2CV), Math.round(x.floor1CV)].forEach((v,i)=>tr.appendChild(el('td',i?{class:'num'}:null,String(v)))); head.appendChild(tr); });
+}
+
+$('camSel').addEventListener('change', e=>selectCamera(e.target.value==='custom'?'custom':+e.target.value, 0));
+$('circSel').addEventListener('change', e=>selectCamera(+$('camSel').value, +e.target.value));
+document.querySelectorAll('input,select').forEach(n=>{
+  if(['importFile','camSel','circSel'].includes(n.id)) return;
+  const h=()=>{ if(DATA_IDS.includes(n.id) && $('camSel').value!=='custom'){ $('camSel').value='custom'; fillCircuits('custom'); } update(); };
+  n.addEventListener('input', h);
+});
+$('copyEntry').addEventListener('click', async ()=>{
+  const t=$('dbEntry'); let ok=false;
+  try{ await navigator.clipboard.writeText(t.value); ok=true; }catch(e){ t.focus(); t.select(); }
+  $('status').textContent = ok ? 'Database entry copied.' : 'Entry selected. Copy it with Cmd+C or Ctrl+C.';
+});
+$('importBtn').addEventListener('click',()=>$('importFile').click());
+$('importFile').addEventListener('change', async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try { const p=JSON.parse(await f.text()); if(!FCG.CURVES[p.curve]) throw new Error('not a profile'); $('camSel').value='custom'; fillCircuits('custom'); setOptions(Object.assign({}, DEFAULTS, p)); setData(p); $('status').textContent='Loaded '+f.name+'.'; }
+  catch(err){ $('status').textContent='That file is not a False Color Generator profile.'; }
+  e.target.value='';
+});
+async function saveFile(filename, u8){
+  const blob=new Blob([u8],{type:'application/zip'});
+  if(window.claude && typeof window.claude.use==='function'){
+    try{ const d=await window.claude.use('downloads'); if(d){ await d.save({filename, data:blob}); return 'saved'; } }
+    catch(err){ if(err && err.code==='declined') return 'declined'; if(err && err.code==='rate_limited') return 'busy'; }
+  }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  return 'started';
+}
+$('exportBtn').addEventListener('click', async ()=>{
+  const p=readForm(); if(FCG.validate(p).length) return;
+  const btn=$('exportBtn'), st=$('status'); btn.disabled=true; st.textContent='Building LUTs...';
+  await new Promise(r=>setTimeout(r,30));
+  try{
+    const ex=FCG.exportAll(p,{date:new Date().toISOString().slice(0,10)});
+    const r=await saveFile(ex.folder+'.zip', ex.zip);
+    st.textContent = r==='declined' ? 'Download cancelled.' : r==='busy' ? 'A save prompt is already open.' : `${ex.files.length} files (${(ex.zip.length/1048576).toFixed(1)} MB) in ${ex.folder}.zip.`;
+  }catch(err){ st.textContent='Export failed: '+err.message; }
+  btn.disabled=false;
+});
+
+(function credits(){
+  const f=$('credits'), seen=[]; DB.forEach(c=>{ if(c.credit) seen.push(c); }); if(!seen.length) return;
+  f.appendChild(document.createTextNode('Dynamic range measurements: '));
+  seen.forEach((c,i)=>{ const k=c.credit; if(i) f.appendChild(document.createTextNode('; '));
+    f.appendChild(document.createTextNode(`${c.make} ${c.model} from the `));
+    const a=document.createElement('a'); a.href=k.url; a.target='_blank'; a.rel='noopener'; a.textContent=`${k.org} ${k.title}`; f.appendChild(a);
+    f.appendChild(document.createTextNode(`, tested by ${k.tester}`)); });
+  f.appendChild(document.createTextNode('. Middle gray and ISO behavior measured separately for this app. Not affiliated with or endorsed by the sources credited. Provided as is, with no warranty: check the LUT against your camera\'s own clip indicator before relying on it on set.'));
+})();
+setOptions(DEFAULTS);
+let restored=false;
+try{ const st=JSON.parse(localStorage.getItem(KEY)||'null');
+  if(st && st.profile && FCG.CURVES[st.profile.curve]){
+    setOptions(Object.assign({}, DEFAULTS, st.profile));
+    if(st.cam!=='custom' && DB[st.cam] && DB[st.cam].circuits[st.circ||0]){ selectCamera(+st.cam, +(st.circ||0)); $('isoList').value=(st.profile.isoList||[]).join(', '); update(); }
+    else { $('camSel').value='custom'; fillCircuits('custom'); setData(st.profile); }
+    restored=true; } }catch(e){}
+if(!restored){ if(DB.length) selectCamera(0,0); else selectCamera('custom'); }
+})();
+</script>
+</body>
+</html>
