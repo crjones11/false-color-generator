@@ -23,6 +23,7 @@ Each LUT is valid for one ISO only. Using a higher-ISO LUT at a lower ISO settin
 ## Status
 
 - RED Log3G10 is checked against Nikon ZR frames at four ISOs.
+- Sony VENICE (S-Log3) is measured on the legal SDI log output with a null LUT loaded. Those LUTs are only for that setup.
 - Sony S-Log3 is checked against Sony's Technical Summary for S-Gamut3/S-Log3 (code values 95, 420 and 598 for 0%, 18% and 90%).
 - ARRI LogC3 (EI 800 only), ARRI LogC4 and Blackmagic Film Gen 5 are implemented but **not yet verified** against the manufacturers' documents. The page flags them.
 - The LUTs have been checked in software against real frames, not yet on a camera or monitor.

@@ -211,7 +211,7 @@ DB.forEach((c,i)=>{ const o=document.createElement('option'); o.value=String(i);
 
 function fromDB(ci, ki){
   const c=DB[ci], k=c.circuits[ki];
-  return {credit:c.credit||null, make:c.make, model:c.model, curve:c.curve, baseISO:k.baseISO, isoList:k.isos.slice(), isoMode:k.isoMode||(k.isoShifts===false?'none':'clip'),
+  return {credit:c.credit||null, signal:c.signal||null, make:c.make, model:c.model, curve:c.curve, baseISO:k.baseISO, isoList:k.isos.slice(), isoMode:k.isoMode||(k.isoShifts===false?'none':'clip'),
     clipSource:k.clipMax?'imatest':'cv', clipMax:k.clipMax||null, clipOf:k.clipOf||65535, clipCV:k.clipMax?k.clipMax/(k.clipOf||65535)*1023:k.clipCV, greyCV:k.grayCV, dr2:k.dr2, dr1:k.dr1, floorKnown:k.dr2!=null};
 }
 function fillCircuits(ci){
@@ -247,6 +247,7 @@ function readForm(){
   const ci0=$('camSel').value;
   return {
     credit: ci0!=='custom' && DB[ci0] ? (DB[ci0].credit||null) : null,
+    signal: ci0!=='custom' && DB[ci0] ? (DB[ci0].signal||null) : null,
     clipSource: man?'cv':'imatest', clipMax: man?null:cMax, clipOf: man?null:cOf,
     make:$('make').value.trim(), model:$('model').value.trim(), curve:$('curve').value,
     baseISO:num('baseISO'),
@@ -264,7 +265,7 @@ function update(){
   $('clipCalc').textContent = isFinite(p.clipCV) ? `Clip level = code value ${p.clipCV.toFixed(1)} on the 10-bit full-range scale` + (p.clipSource==='imatest' ? ` (${p.clipMax} / ${p.clipOf} x 1023).` : '.') : '';
   $('curveBadge').innerHTML = c ? (c.verified ? '<span class="badge ok">verified</span>' : '<span class="badge warn">formula unverified</span>') : '';
   $('curveNote').textContent = c && !c.verified ? ('The ' + c.name + ' formula has not been checked against the manufacturer\'s document yet. ' + (c.note||'')) : '';
-  if(ci!=='custom'){ const k=DB[ci].circuits[$('circSel').value||0], s=k.sources||{}; $('camInfo').textContent = [c?c.name:'', s.range&&('Range: '+s.range), s.gray&&('Gray: '+s.gray), s.iso&&('ISO: '+s.iso)].filter(Boolean).join('\n'); }
+  if(ci!=='custom'){ const k=DB[ci].circuits[$('circSel').value||0], s=k.sources||{}; $('camInfo').textContent = [c?c.name:'', DB[ci].signal&&('Signal: '+DB[ci].signal), s.range&&('Clip: '+s.range), s.gray&&('Gray: '+s.gray), s.iso&&('ISO: '+s.iso)].filter(Boolean).join('\n'); }
   else $('camInfo').textContent = 'Custom camera: enter its data under "Camera data".';
   $('dbEntry').value = JSON.stringify({ make:p.make, model:p.model, curve:p.curve, circuit:{ name:`Base ISO ${p.baseISO}`, baseISO:p.baseISO, isos:p.isoList, isoMode:p.isoMode,
     ...(p.clipSource==='imatest' ? {clipMax:p.clipMax, clipOf:p.clipOf} : {clipCV:Math.round(p.clipCV*10)/10}), ...(p.floorKnown===false ? {} : {dr2:p.dr2, dr1:p.dr1}), grayCV:Math.round(p.greyCV*10)/10, sources:{range:'', gray:'', iso:''} } }, null, 2);

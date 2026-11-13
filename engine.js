@@ -221,12 +221,13 @@
 <p><b>${esc(p.make)} ${esc(p.model)}</b>, ${esc(C.name)}, base ISO ${p.baseISO}. Generated ${esc(opts.date || '')}.</p>
 ${C.verified ? '' : '<p class="w">The formula for this log curve has not yet been checked against the manufacturer\'s document. Verify zone positions before relying on these LUTs.</p>'}
 <h2>Profile</h2>
+${p.signal ? `<p class="w"><b>Measured on:</b> ${esc(p.signal)}</p>` : ''}
 <table><tr><th>Clip level at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Metered middle gray at base ISO</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured. Below gray the picture shows in gray, with no shadow colors.</td></tr>' : `<tr><th>Range below clip at SNR 2</th><td>${p.dr2} stops</td></tr><tr><th>Range below clip at SNR 1</th><td>${p.dr1} stops</td></tr>`}<tr><th>ISO behavior</th><td>${ISO_MODES[isoModeOf(p)]}</td></tr><tr><th>Gray band</th><td>plus or minus ${p.greyBand.toFixed(2)} stop</td></tr><tr><th>Picture zone</th><td>at least ${(p.pictureStops == null ? 1 : p.pictureStops)} stop(s) either side of gray</td></tr></table>
 <h2>Headroom by ISO</h2>
 <table><tr><th>ISO</th><th>Clip (code value)</th><th>Metered gray (code value)</th><th>Stops over gray</th><th>Stops under gray to SNR 2</th><th>to SNR 1</th><th>Clip color starts at (${p.lutSize}-point LUT)</th></tr>${rows}</table>
 <p>Only the base ISO row uses measured values. Other ISOs are calculated from the ISO difference in stops, using the ISO behavior above.</p>
 <h2>How to read the LUT</h2>
-<ul><li>Warm colors count down from clip, judged on the brightest of the three channels.</li><li>${p.floorKnown === false ? 'No noise floor data for this camera, so there are no shadow colors: below gray the picture shows in gray.' : 'Cool colors count up from the SNR 2 noise floor, judged on luma.'}</li><li>Green is metered middle gray. Between the colored zones the picture shows in gray.</li><li>Each LUT is valid for one ISO only. Using a higher-ISO LUT at a lower ISO setting can hide clipping.</li></ul>
+<ul><li>Warm colors count down from clip, judged on the brightest of the three channels.</li><li>${p.floorKnown === false ? 'No noise floor data for this camera, so there are no shadow colors: below gray the picture shows in gray.' : 'Cool colors count up from the SNR 2 noise floor, judged on luma.'}</li><li>Green is metered middle gray. Between the colored zones the picture shows in gray.</li><li>${isoModeOf(p) === 'none' ? `The camera records at its base ISO; on this signal clip and gray do not move with EI, so one LUT covers every EI on base ${p.baseISO}.` : 'Each LUT is valid for one ISO only. Using a higher-ISO LUT at a lower ISO setting can hide clipping.'}</li></ul>
 <h2>Files</h2>
 <ul><li><b>Full</b>: for an in-camera LUT slot, or any device that scales its own output.</li><li><b>OmniScope (.tfc4)</b>: preset for the Nobe OmniScope false color scope. It works on luma only, so it cannot flag a single clipped channel the way the LUT does.</li><li><b>Legal</b>: same LUT with output colors scaled to 64-940, for a device that writes LUT output straight to SDI.</li>${opts.inputLegal ? '<li>These LUTs were built for a legal-scaled input signal that the device does not expand.</li>' : ''}</ul>
 <h2>Range check before trusting it on set</h2>
@@ -268,9 +269,9 @@ ${p.credit ? `<p>Dynamic range measurements from the <a href="${esc(p.credit.url
         text: makeCube(m, {
           size: p.lutSize, output, inputLegal: !!p.inputLegal, conservativeClip: p.conservativeClip !== false,
           title: `${base}_${tag}`,
-          comments: [`False Color Generator`, `${p.make} ${p.model} | ${CURVES[p.curve].name} | ISO ${m.iso} only`,
+          comments: [`False Color Generator`, `${p.make} ${p.model} | ${CURVES[p.curve].name} | ${isoModeOf(p) === 'none' ? `base ISO ${m.iso}, every EI` : `ISO ${m.iso} only`}`,
             `clip ${Math.round(m.clipCV)} gray ${Math.round(m.greyCV)} (10-bit full range) | +${m.over.toFixed(1)} stops over gray`,
-            `input ${p.inputLegal ? 'legal (unexpanded)' : 'full'} | output ${output}`]
+            `input ${p.inputLegal ? 'legal (unexpanded)' : 'full'} | output ${output}`, ...(p.signal ? ['measured on: ' + p.signal] : [])]
         })
       });
     }

@@ -122,4 +122,14 @@ near(F.CURVES.slog3.enc(0.9) * 1023, 598, 0.5, 'S-Log3 90% white');
 ok(F.validate(Object.assign({}, zr, { greyCV: 800 })).length > 0, 'grey above clip rejected');
 ok(F.validate(Object.assign({}, zr, { dr1: 9 })).length > 0, 'SNR1 < SNR2 rejected');
 
+// camera database sanity
+{ const DB = require('./cameras.js');
+  for (const cam of DB) for (const k of cam.circuits) {
+    const p = { make: cam.make, model: cam.model, curve: cam.curve, baseISO: k.baseISO, isoList: k.isos, isoMode: k.isoMode, clipCV: k.clipMax ? k.clipMax / k.clipOf * 1023 : k.clipCV, greyCV: k.grayCV, dr2: k.dr2, dr1: k.dr1, floorKnown: k.dr2 != null, greyBand: 0.17, pictureStops: 1, lutSize: 33, conservativeClip: true, signal: cam.signal };
+    ok(F.validate(p).length === 0, `${cam.model} ${k.name} valid: ${F.validate(p)}`);
+    const m = F.buildModel(p, k.baseISO); ok(m.over > 3 && m.over < 9, `${cam.model} ${k.name} stops over gray ${m.over.toFixed(2)}`);
+    if (cam.signal) ok(/Measured on/.test(F.makeReport(p, [m], {})), 'report shows signal note');
+  }
+  const v = DB.find(c => c.model === 'VENICE'); const p = { curve: 'slog3' };
+  near(Math.log2(F.CURVES.slog3.lin(887 / 1023) / F.CURVES.slog3.lin(426 / 1023)), 5.94, 0.02, 'Venice 2500: +5.9 over gray'); }
 console.log(`${n} checks passed`);
