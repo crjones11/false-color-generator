@@ -76,22 +76,29 @@
     if (p.greyCV >= p.clipCV) e.push('Middle gray must be below the clip level.');
     if (!noFloor && p.dr1 < p.dr2) e.push('Range at SNR 1 must be at least the range at SNR 2.');
     if (!Array.isArray(p.isoList) || !p.isoList.length || p.isoList.some(i => !(i >= 25 && i <= 409600))) e.push('ISO list must contain at least one valid ISO.');
+    if (p.isoMode != null && !ISO_MODES[p.isoMode]) e.push('Unknown ISO behavior.');
     if (![17, 33, 65].includes(p.lutSize)) e.push('LUT size must be 17, 33 or 65.');
     return e;
   }
 
+  const ISO_MODES = { clip: 'Clip moves with ISO, metered gray stays', gray: 'Metered gray moves with EI, clip stays (Cine EI)', none: 'Base ISO only, no shift' };
+  function isoModeOf(p) { return ISO_MODES[p.isoMode] ? p.isoMode : (p.isoShifts === false ? 'none' : 'clip'); }
+
   // ---- Zone model for one ISO ----
   function buildModel(p, iso) {
     const C = CURVES[p.curve];
-    const shift = p.isoShifts ? log2(iso / p.baseISO) : 0;
-    const k = Math.pow(2, shift);
+    // ISO behavior: 'clip' = clip and floor move with ISO, metered gray stays (Nikon ZR, RED-style ISO).
+    // 'gray' = signal stays at base, metered gray moves with EI (Sony Cine EI). 'none' = no shift.
+    const mode = isoModeOf(p);
+    const shift = mode === 'none' ? 0 : log2(iso / p.baseISO);
+    const k = Math.pow(2, shift), kc = mode === 'clip' ? k : 1;
     const baseClipLin = C.lin(p.clipCV / 1023);
-    const clipLin = baseClipLin * k;
-    const greyLin = C.lin(p.greyCV / 1023);
+    const clipLin = baseClipLin * kc;
+    const greyLin = C.lin(p.greyCV / 1023) / (mode === 'gray' ? k : 1);
     // No noise data: no shadow colors at all; the picture shows in gray all the way down.
     const noFloor = p.floorKnown === false;
-    const floor2Lin = noFloor ? -Infinity : baseClipLin / Math.pow(2, p.dr2) * k;
-    const floor1Lin = noFloor ? -Infinity : baseClipLin / Math.pow(2, p.dr1) * k;
+    const floor2Lin = noFloor ? -Infinity : baseClipLin / Math.pow(2, p.dr2) * kc;
+    const floor1Lin = noFloor ? -Infinity : baseClipLin / Math.pow(2, p.dr1) * kc;
     const clipEnc = C.enc(clipLin);
     const over = log2(clipLin / greyLin);
     const under2 = noFloor ? NaN : log2(greyLin / floor2Lin);
@@ -119,7 +126,7 @@
     return {
       iso, shift, curve: C, clipLin, greyLin, floor2Lin, floor1Lin, clipEnc,
       clipCV: clipEnc * 1023, clipOutOfRange: clipEnc > 1,
-      greyCV: p.greyCV, floor2CV: cv(floor2Lin), floor1CV: cv(floor1Lin),
+      greyCV: C.enc(greyLin) * 1023, isoMode: mode, floor2CV: cv(floor2Lin), floor1CV: cv(floor1Lin),
       over, under2, under1, band, nHi, nLo, zones, noFloor
     };
   }
@@ -204,7 +211,7 @@
       const t = clipThreshold(m, p.lutSize, opts.conservativeClip) * 1023;
       const early = Math.log2(m.clipLin / C.lin(t / 1023));
       const u = v => isFinite(v) ? f1(v) : 'not measured';
-      return `<tr><td>${m.iso}</td><td>${m.clipOutOfRange ? 'above 1023' : f0(m.clipCV)}</td><td>+${f1(m.over)}</td><td>${u(m.under2)}</td><td>${u(m.under1)}</td><td>${f0(t)} (${early.toFixed(2)} stop early)</td></tr>`;
+      return `<tr><td>${m.iso}</td><td>${m.clipOutOfRange ? 'above 1023' : f0(m.clipCV)}</td><td>${f0(m.greyCV)}</td><td>+${f1(m.over)}</td><td>${u(m.under2)}</td><td>${u(m.under1)}</td><td>${f0(t)} (${early.toFixed(2)} stop early)</td></tr>`;
     }).join('');
     const legend = models.map(m => `<h3>ISO ${m.iso}</h3><table><tr><th></th><th>Zone</th><th>Code values (full)</th><th>On a legal SDI waveform</th></tr>` +
       m.zones.map(z => `<tr><td><span class="sw" style="background:${z.color || 'linear-gradient(#bbb,#555)'}"></span></td><td>${esc(z.label)}</td><td>${f0(Math.max(0, z.loCV))} to ${f0(Math.min(1023, z.hiCV))}</td><td>${f0(fullToLegalCV(Math.max(0, z.loCV)))} to ${f0(fullToLegalCV(Math.min(1023, z.hiCV)))}</td></tr>`).join('') + '</table>').join('');
@@ -214,10 +221,10 @@
 <p><b>${esc(p.make)} ${esc(p.model)}</b>, ${esc(C.name)}, base ISO ${p.baseISO}. Generated ${esc(opts.date || '')}.</p>
 ${C.verified ? '' : '<p class="w">The formula for this log curve has not yet been checked against the manufacturer\'s document. Verify zone positions before relying on these LUTs.</p>'}
 <h2>Profile</h2>
-<table><tr><th>Clip level at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Metered middle gray</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured. Below gray the picture shows in gray, with no shadow colors.</td></tr>' : `<tr><th>Range below clip at SNR 2</th><td>${p.dr2} stops</td></tr><tr><th>Range below clip at SNR 1</th><td>${p.dr1} stops</td></tr>`}<tr><th>Clip moves with ISO</th><td>${p.isoShifts ? 'Yes' : 'No'}</td></tr><tr><th>Gray band</th><td>plus or minus ${p.greyBand.toFixed(2)} stop</td></tr><tr><th>Picture zone</th><td>at least ${(p.pictureStops == null ? 1 : p.pictureStops)} stop(s) either side of gray</td></tr></table>
+<table><tr><th>Clip level at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Metered middle gray at base ISO</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured. Below gray the picture shows in gray, with no shadow colors.</td></tr>' : `<tr><th>Range below clip at SNR 2</th><td>${p.dr2} stops</td></tr><tr><th>Range below clip at SNR 1</th><td>${p.dr1} stops</td></tr>`}<tr><th>ISO behavior</th><td>${ISO_MODES[isoModeOf(p)]}</td></tr><tr><th>Gray band</th><td>plus or minus ${p.greyBand.toFixed(2)} stop</td></tr><tr><th>Picture zone</th><td>at least ${(p.pictureStops == null ? 1 : p.pictureStops)} stop(s) either side of gray</td></tr></table>
 <h2>Headroom by ISO</h2>
-<table><tr><th>ISO</th><th>Clip (code value)</th><th>Stops over gray</th><th>Stops under gray to SNR 2</th><th>to SNR 1</th><th>Clip color starts at (${p.lutSize}-point LUT)</th></tr>${rows}</table>
-<p>Only the base ISO row uses measured values. Other ISOs are calculated by shifting clip and floor by the ISO difference in stops.</p>
+<table><tr><th>ISO</th><th>Clip (code value)</th><th>Metered gray (code value)</th><th>Stops over gray</th><th>Stops under gray to SNR 2</th><th>to SNR 1</th><th>Clip color starts at (${p.lutSize}-point LUT)</th></tr>${rows}</table>
+<p>Only the base ISO row uses measured values. Other ISOs are calculated from the ISO difference in stops, using the ISO behavior above.</p>
 <h2>How to read the LUT</h2>
 <ul><li>Warm colors count down from clip, judged on the brightest of the three channels.</li><li>${p.floorKnown === false ? 'No noise floor data for this camera, so there are no shadow colors: below gray the picture shows in gray.' : 'Cool colors count up from the SNR 2 noise floor, judged on luma.'}</li><li>Green is metered middle gray. Between the colored zones the picture shows in gray.</li><li>Each LUT is valid for one ISO only. Using a higher-ISO LUT at a lower ISO setting can hide clipping.</li></ul>
 <h2>Files</h2>
@@ -273,5 +280,5 @@ ${p.credit ? `<p>Dynamic range measurements from the <a href="${esc(p.credit.url
     return { folder, files, models, zip: makeZip(files) };
   }
 
-  return { CURVES, PALETTE, validate, buildModel, clipThreshold, classify, makeCube, makeTfc4, makeReport, makeZip, crc32, exportAll, fileBase, fullToLegalCV, legalToFullCV };
+  return { ISO_MODES, CURVES, PALETTE, validate, buildModel, clipThreshold, classify, makeCube, makeTfc4, makeReport, makeZip, crc32, exportAll, fileBase, fullToLegalCV, legalToFullCV };
 });

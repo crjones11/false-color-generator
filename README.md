@@ -33,7 +33,7 @@ Camera data lives in `cameras.js`. In the app, open **Camera data**, type the nu
 
 - Imatest "max=" value, and the "0.5 (Medium)" and "1.0 (Low)" dynamic range rows
 - metered 18% gray as a 10-bit full-range code value
-- the ISOs the circuit covers, and whether the clip point moves with ISO (confirm with one frame at a non-base ISO)
+- the ISOs the circuit covers, and how it behaves at other ISOs: clip moves and gray stays (Nikon ZR), or gray moves and clip stays (Sony Cine EI). Confirm with one frame at a non-base ISO or EI.
 
 To suggest a camera for the built-in list, use **Submit this camera for review** in the same panel. It opens a pre-filled GitHub issue with the data; add where the numbers came from so they can be checked.
 

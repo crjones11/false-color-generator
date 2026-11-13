@@ -27,7 +27,7 @@ near(m800.floor2CV, 159.7, 0.3, 'ISO 800 SNR2 floor CV');
 near(m800.floor1CV, 125.9, 0.3, 'ISO 800 SNR1 floor CV');
 near(m1600.clipCV, 861.0, 0.2, 'ISO 1600 clip CV (frame max was 861.9)');
 near(m1600.over, 6.65, 0.02, 'ISO 1600 stops over grey');
-near(m1600.greyCV, 406, 0, 'grey unchanged by ISO');
+near(m1600.greyCV, 406, 1e-6, 'gray unchanged by ISO');
 const zrHi = Object.assign({}, zr, { baseISO: 6400, greyCV: 399, dr2: 9.16, dr1: 10.9, isoList: [3200, 6400] });
 near(F.buildModel(zrHi, 3200).clipCV, 723.0, 0.2, 'ISO 3200 clip CV (frame pile-up was 722.9)');
 near(F.buildModel(zrHi, 6400).floor2CV, 200.8, 0.3, 'ISO 6400 SNR2 floor CV');
@@ -105,6 +105,17 @@ ok(/Gunther Machu/.test(F.makeReport(Object.assign({}, zr, { credit: { org: 'Cin
   ok(/Not measured/.test(F.makeReport(nf, [m], {})), 'report says floor not measured');
   const tf = JSON.parse(F.makeTfc4(m)); ok(tf.ranges[0].grayscale_up === 'false' && tf.ranges.some(r => r.grayscale_up === 'true'), 'tfc4 builds');
   F.makeCube(m, { size: 17, output: 'full', title: 't' }); }
+// Sony Cine EI: signal stays at base, metered gray moves; chart says +6 over at base EI, +7 at one stop up
+{ const v = { make: 'Sony', model: 'VENICE', curve: 'slog3', baseISO: 500, clipCV: F.CURVES.slog3.enc(0.18 * 64) * 1023, greyCV: 420, floorKnown: false, isoList: [250, 500, 1000], isoMode: 'gray', greyBand: 0.17, pictureStops: 1, lutSize: 33, conservativeClip: true };
+  ok(F.validate(v).length === 0, 'Cine EI profile valid');
+  const [a, b, c] = v.isoList.map(i => F.buildModel(v, i));
+  near(b.over, 6, 1e-6, 'EI 500: +6 over'); near(c.over, 7, 1e-6, 'EI 1000: +7 over'); near(a.over, 5, 1e-6, 'EI 250: +5 over');
+  near(c.clipCV, b.clipCV, 1e-6, 'Cine EI: clip code value fixed');
+  ok(c.greyCV < b.greyCV - 50 && a.greyCV > b.greyCV + 50, `Cine EI: gray moves (${a.greyCV.toFixed(0)}/${b.greyCV.toFixed(0)}/${c.greyCV.toFixed(0)})`);
+  near(F.CURVES.slog3.lin(c.greyCV / 1023), 0.09, 1e-9, 'EI 1000: gray lands at half the base exposure');
+  ok(/Cine EI/.test(F.makeReport(v, [a, b, c], {})), 'report names the ISO behavior');
+  ok(F.validate(Object.assign({}, v, { isoMode: 'bogus' })).length > 0, 'bad ISO mode rejected');
+  ok(F.buildModel(Object.assign({}, zr, { isoShifts: false }), 1600).clipCV === F.buildModel(zr, 800).clipCV, 'legacy isoShifts:false = no shift'); }
 // S-Log3 against Sony's published 90% value
 near(F.CURVES.slog3.enc(0.9) * 1023, 598, 0.5, 'S-Log3 90% white');
 // validation

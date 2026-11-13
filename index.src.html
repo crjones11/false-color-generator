@@ -123,7 +123,9 @@ footer a{color:#b9c2d6}
     </div>
     <div class="row one"><div><label for="curve">Log curve <span id="curveBadge"></span></label><select id="curve"></select></div></div>
     <div class="row one"><div><label for="baseISO">Base ISO of this circuit</label><input id="baseISO" inputmode="numeric"></div></div>
-    <label class="check"><input type="checkbox" id="isoShifts"><span>Clip point moves with ISO (gray stays put). Confirm with one frame at a non-base ISO.</span></label>
+    <div class="row one"><div><label for="isoMode">How the camera behaves at other ISOs or EIs</label>
+      <select id="isoMode"><option value="clip">Clip moves with ISO, metered gray stays (e.g. Nikon ZR)</option><option value="gray">Metered gray moves with EI, clip stays (Sony Cine EI)</option><option value="none">Base ISO only, no shift</option></select></div></div>
+    <p class="hint">Confirm with one frame at a non-base ISO or EI: meter a gray card at that setting and read gray and clip.</p>
 
     <h3>From the Imatest sheet (base ISO)</h3>
     <div class="sheet" aria-hidden="true">
@@ -181,7 +183,7 @@ footer a{color:#b9c2d6}
   <section>
     <h2>Headroom by ISO</h2>
     <table id="headroom"></table>
-    <p class="note">Only the base ISO row is measured. Other rows shift clip and floor by the ISO difference in stops.</p>
+    <p class="note">Only the base ISO row is measured. Other rows are calculated from the ISO difference in stops, using the camera's ISO behavior.</p>
   </section>
 </div>
 </main>
@@ -199,7 +201,7 @@ footer a{color:#b9c2d6}
 const $ = id => document.getElementById(id);
 const DB = (typeof FCG_CAMERAS !== 'undefined' ? FCG_CAMERAS : []);
 const DEFAULTS = {greyBand:0.17, pictureStops:1, lutSize:33, conservativeClip:true, inputLegal:false};
-const DATA_IDS = ['make','model','curve','baseISO','isoShifts','clipMax','clipOf','dr2','dr1','noFloor','clipManual','clipCV','clipRange','greyCV','greyRange'];
+const DATA_IDS = ['make','model','curve','baseISO','isoMode','clipMax','clipOf','dr2','dr1','noFloor','clipManual','clipCV','clipRange','greyCV','greyRange'];
 const KEY = 'fcg.state.v2';
 let activeISO = null;
 
@@ -209,7 +211,7 @@ DB.forEach((c,i)=>{ const o=document.createElement('option'); o.value=String(i);
 
 function fromDB(ci, ki){
   const c=DB[ci], k=c.circuits[ki];
-  return {credit:c.credit||null, make:c.make, model:c.model, curve:c.curve, baseISO:k.baseISO, isoList:k.isos.slice(), isoShifts:k.isoShifts!==false,
+  return {credit:c.credit||null, make:c.make, model:c.model, curve:c.curve, baseISO:k.baseISO, isoList:k.isos.slice(), isoMode:k.isoMode||(k.isoShifts===false?'none':'clip'),
     clipSource:k.clipMax?'imatest':'cv', clipMax:k.clipMax||null, clipOf:k.clipOf||65535, clipCV:k.clipMax?k.clipMax/(k.clipOf||65535)*1023:k.clipCV, greyCV:k.grayCV, dr2:k.dr2, dr1:k.dr1, floorKnown:k.dr2!=null};
 }
 function fillCircuits(ci){
@@ -226,7 +228,7 @@ function selectCamera(ci, ki){
 }
 function setData(p){
   $('make').value=p.make||''; $('model').value=p.model||''; $('curve').value=p.curve;
-  $('baseISO').value=p.baseISO; $('isoList').value=(p.isoList||[]).join(', '); $('isoShifts').checked=!!p.isoShifts;
+  $('baseISO').value=p.baseISO; $('isoList').value=(p.isoList||[]).join(', '); $('isoMode').value=p.isoMode||(p.isoShifts===false?'none':'clip');
   const man = p.clipSource==='cv' || !(p.clipMax>0);
   $('clipManual').checked=man;
   $('clipMax').value=p.clipMax||''; $('clipOf').value=p.clipOf||65535; $('clipCV').value=Math.round(p.clipCV*10)/10; $('clipRange').value='full';
@@ -249,7 +251,7 @@ function readForm(){
     make:$('make').value.trim(), model:$('model').value.trim(), curve:$('curve').value,
     baseISO:num('baseISO'),
     isoList:$('isoList').value.split(/[,\s]+/).filter(Boolean).map(Number),
-    isoShifts:$('isoShifts').checked,
+    isoMode:$('isoMode').value,
     clipCV, greyCV:toFull(num('greyCV'),'greyRange'), dr2:num('dr2'), dr1:num('dr1'), floorKnown:!$('noFloor').checked,
     greyBand:num('greyBand'), pictureStops:num('pictureStops'), lutSize:parseInt($('lutSize').value,10),
     conservativeClip:$('conservativeClip').checked, inputLegal:$('inputLegal').checked
@@ -264,7 +266,7 @@ function update(){
   $('curveNote').textContent = c && !c.verified ? ('The ' + c.name + ' formula has not been checked against the manufacturer\'s document yet. ' + (c.note||'')) : '';
   if(ci!=='custom'){ const k=DB[ci].circuits[$('circSel').value||0], s=k.sources||{}; $('camInfo').textContent = [c?c.name:'', s.range&&('Range: '+s.range), s.gray&&('Gray: '+s.gray), s.iso&&('ISO: '+s.iso)].filter(Boolean).join('\n'); }
   else $('camInfo').textContent = 'Custom camera: enter its data under "Camera data".';
-  $('dbEntry').value = JSON.stringify({ make:p.make, model:p.model, curve:p.curve, circuit:{ name:`Base ISO ${p.baseISO}`, baseISO:p.baseISO, isos:p.isoList, isoShifts:p.isoShifts,
+  $('dbEntry').value = JSON.stringify({ make:p.make, model:p.model, curve:p.curve, circuit:{ name:`Base ISO ${p.baseISO}`, baseISO:p.baseISO, isos:p.isoList, isoMode:p.isoMode,
     ...(p.clipSource==='imatest' ? {clipMax:p.clipMax, clipOf:p.clipOf} : {clipCV:Math.round(p.clipCV*10)/10}), ...(p.floorKnown===false ? {} : {dr2:p.dr2, dr1:p.dr1}), grayCV:Math.round(p.greyCV*10)/10, sources:{range:'', gray:'', iso:''} } }, null, 2);
   { const entry=$('dbEntry').value, title=`[Camera] ${p.make||'Unknown'} ${p.model||''} ${c?c.short:''}, base ISO ${isFinite(p.baseISO)?p.baseISO:'?'}`.replace(/\s+/g,' ').trim();
     const body=['Camera data submitted from the False Color Generator.','',
@@ -314,8 +316,8 @@ function render(p, models){
   if(p.conservativeClip){ const early=Math.log2(m.clipLin/m.curve.lin(Math.min(1,thr/1023))); if(early>0.01) warns.push(`In the ${p.lutSize}-point LUT the clip color starts at code value ${Math.round(thr)}, about ${early.toFixed(2)} stop early (dashed line).`); }
   $('modelWarn').textContent=warns.join(' ');
   // headroom table
-  const h2=el('tr'); ['ISO','Clip','Over gray','Under (SNR 2)','Under (SNR 1)','Floor SNR 2','Floor SNR 1'].forEach((h,i)=>h2.appendChild(el('th',i?{class:'num'}:null,h))); head.appendChild(h2);
-  models.forEach(x=>{ const tr=el('tr'); [String(x.iso)+(x.iso===p.baseISO?' (base)':''), x.clipOutOfRange?'>1023':Math.round(x.clipCV), '+'+x.over.toFixed(1)].concat(x.noFloor ? ['n/a','n/a','n/a','n/a'] : [x.under2.toFixed(1), x.under1.toFixed(1), Math.round(x.floor2CV), Math.round(x.floor1CV)]).forEach((v,i)=>tr.appendChild(el('td',i?{class:'num'}:null,String(v)))); head.appendChild(tr); });
+  const h2=el('tr'); ['ISO','Clip','Gray','Over gray','Under (SNR 2)','Under (SNR 1)','Floor SNR 2','Floor SNR 1'].forEach((h,i)=>h2.appendChild(el('th',i?{class:'num'}:null,h))); head.appendChild(h2);
+  models.forEach(x=>{ const tr=el('tr'); [String(x.iso)+(x.iso===p.baseISO?' (base)':''), x.clipOutOfRange?'>1023':Math.round(x.clipCV), Math.round(x.greyCV), '+'+x.over.toFixed(1)].concat(x.noFloor ? ['n/a','n/a','n/a','n/a'] : [x.under2.toFixed(1), x.under1.toFixed(1), Math.round(x.floor2CV), Math.round(x.floor1CV)]).forEach((v,i)=>tr.appendChild(el('td',i?{class:'num'}:null,String(v)))); head.appendChild(tr); });
 }
 
 $('camSel').addEventListener('change', e=>selectCamera(e.target.value==='custom'?'custom':+e.target.value, 0));
