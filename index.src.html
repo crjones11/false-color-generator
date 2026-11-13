@@ -77,6 +77,8 @@ footer a{color:#b9c2d6}
 .coffee-btn{margin-left:auto;font-weight:700;letter-spacing:.5px;font-size:12px;text-transform:uppercase;text-decoration:none;color:#f2c94c;border:1px solid #f2c94c;padding:6px 12px;border-radius:4px;white-space:nowrap}
 .coffee-btn:hover{background:rgba(242,201,76,.12)}.coffee-btn:active{opacity:.85}
 .btnlink{display:inline-block;font:inherit;border-radius:7px;border:1px solid #4a7dff;background:#1d2a4a;color:#cfdcff;padding:8px 12px;text-decoration:none}.btnlink:hover{background:#26375f}
+#baseTabs:empty{display:none}#baseTabs{margin-bottom:8px}#baseTabs button{font-weight:600}
+#baseTabs .lbl{font-size:12px;color:var(--dim);align-self:center;margin-right:4px}
 </style>
 </head>
 <body>
@@ -169,6 +171,7 @@ footer a{color:#b9c2d6}
 <div>
   <section>
     <h2>Preview</h2>
+    <div class="tabs" id="baseTabs"></div>
     <div class="pz">
       <div class="tabs" id="tabs"></div>
       <label for="pictureStops">Picture zone: keep at least
@@ -287,7 +290,13 @@ function render(p, models){
   tabs.textContent=''; strip.textContent=''; legend.textContent=''; head.textContent=''; big.textContent=''; $('modelWarn').textContent='';
   wrap.querySelectorAll('.tick,.mark').forEach(n=>n.remove());
   if(!models){ legend.appendChild(el('tr')).appendChild(el('td',null,'Fix the highlighted values to see the preview.')); return; }
-  models.forEach(m=>{ const b=el('button',{type:'button'},'ISO '+m.iso); if(m.iso===activeISO) b.className='on'; b.onclick=()=>{activeISO=m.iso; render(p,models);}; tabs.appendChild(b); });
+  const bt=$('baseTabs'); bt.textContent=''; const ci=$('camSel').value;
+  if(ci!=='custom' && DB[ci] && DB[ci].circuits.length>1){
+    bt.appendChild(el('span',{class:'lbl'},'Base'));
+    DB[ci].circuits.forEach((k,i)=>{ const b=el('button',{type:'button'},String(k.baseISO)); if(String(i)===$('circSel').value) b.className='on';
+      b.onclick=()=>{ if(String(i)!==$('circSel').value) selectCamera(+ci, i); }; bt.appendChild(b); });
+  }
+  models.forEach(m=>{ const b=el('button',{type:'button'},(p.isoMode==='none' ? 'All EIs on base ' : 'ISO ')+m.iso); if(m.iso===activeISO) b.className='on'; b.onclick=()=>{activeISO=m.iso; render(p,models);}; tabs.appendChild(b); });
   const m = models.find(x=>x.iso===activeISO) || models[0];
   const stat=(v,l)=>{ const d=el('div'); d.appendChild(el('b',null,v)); d.appendChild(el('span',null,l)); big.appendChild(d); };
   stat('+'+m.over.toFixed(1), 'stops over gray to clip'); if(m.noFloor) stat('n/a','noise floor not measured'); else { stat(m.under2.toFixed(1), 'stops under gray to SNR 2'); stat(m.under1.toFixed(1), 'to SNR 1'); } stat(m.clipOutOfRange?'>1023':String(Math.round(m.clipCV)), 'clip code value');
