@@ -93,17 +93,18 @@ ok(ex.zip[0] === 0x50 && ex.zip[1] === 0x4B, 'zip signature');
 ok(F.crc32(new TextEncoder().encode('123456789')) === 0xCBF43926, 'crc32 check value');
 ok(!/<script>/.test(F.makeReport(Object.assign({}, zr, { model: '<script>x</script>' }), [m800], {})), 'report escapes HTML');
 ok(/Gunther Machu/.test(F.makeReport(Object.assign({}, zr, { credit: { org: 'CineD', tester: 'Gunther Machu', title: 'Nikon ZR Lab Test', url: 'https://www.cined.com/x' } }), [m800], {})), 'report credits the tester');
-// no-floor mode (camera without Imatest data)
+// no-floor mode (camera without Imatest data): no shadow colors, picture to the bottom
 { const nf = Object.assign({}, zr, { floorKnown: false, dr2: NaN, dr1: NaN, pictureStops: 1 });
   ok(F.validate(nf).length === 0, 'no-floor profile valid without DR figures');
   const m = F.buildModel(nf, 800);
-  ok(m.nLo === 4 && isNaN(m.under2) && !m.zones.some(z => z.kind === 'caution'), 'no-floor: 4 cool zones, no caution zone');
-  const lo = m.zones.filter(z => z.kind === 'lo');
-  near(Math.log2(m.greyLin / lo[0].hiLin), 1, 1e-9, 'first cool zone starts 1 stop under gray');
-  ok(lo[0].label === '1 to 2 stops under gray' && /More than 5 stops/.test(m.zones[m.zones.length - 1].label), 'no-floor labels');
+  ok(m.nLo === 0 && isNaN(m.under2) && !m.zones.some(z => ['lo', 'caution', 'noise'].includes(z.kind)), 'no-floor: no shadow zones');
+  const last = m.zones[m.zones.length - 1]; ok(last.kind === 'mid' && last.loCV === 0, 'picture runs to code value 0');
   for (let i = 1; i < m.zones.length; i++) near(m.zones[i].hiLin, m.zones[i - 1].loLin, 1e-12, 'no-floor zones contiguous');
+  const T = F.clipThreshold(m, 1024, false), v = 120 / 1023, c = F.classify(m, v, v, v, T);
+  ok(c.every(x => Math.abs(x - v) < 1e-9), 'deep shadow passes through as picture');
   ok(/Not measured/.test(F.makeReport(nf, [m], {})), 'report says floor not measured');
-  F.makeCube(m, { size: 17, output: 'full', title: 't' }); F.makeTfc4(m); }
+  const tf = JSON.parse(F.makeTfc4(m)); ok(tf.ranges[0].grayscale_up === 'false' && tf.ranges.some(r => r.grayscale_up === 'true'), 'tfc4 builds');
+  F.makeCube(m, { size: 17, output: 'full', title: 't' }); }
 // S-Log3 against Sony's published 90% value
 near(F.CURVES.slog3.enc(0.9) * 1023, 598, 0.5, 'S-Log3 90% white');
 // validation
