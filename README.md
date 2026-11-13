@@ -14,9 +14,19 @@ The zip contains, for each ISO:
 
 - `..._Full_33.cube` for in-camera LUT slots and devices that scale their own output
 - `..._Legal_33.cube` with output colors scaled to 64-940, for devices that write LUT output straight to SDI
-- `..._OmniScope.tfc4`, a Nobe OmniScope false color preset (not yet tested in OmniScope)
+- `..._OmniScope.tfc4`, a Nobe OmniScope false color preset
 
 plus `report.html` (headroom by ISO, zone legend, range check procedure) and `profile.json`.
+
+### OmniScope setup
+
+The preset only lines up if OmniScope analyses the untouched log signal. In OmniScope's Common settings:
+
+- Color Management Input: **Raw** (Working can stay Rec.709)
+- **Preserve working display view in analysis**: off
+- **Scale the video/SDI range to the full range**: on
+
+With Input set to a log color space, OmniScope analyses a converted image and red appears far too early. Tested with a Sony VENICE through Livegrade Frontier.
 
 Each LUT is valid for one ISO only. Using a higher-ISO LUT at a lower ISO setting can hide clipping.
 
