@@ -34,7 +34,7 @@
     },
     logc4: { name: 'ARRI LogC4', short: 'LogC4', verified: false, note: '', enc: logc4.enc, lin: logc4.lin },
     slog3: {
-      name: 'Sony S-Log3', short: 'SLog3', verified: false, note: '',
+      name: 'Sony S-Log3', short: 'SLog3', verified: true, note: 'Checked against Sony\'s Technical Summary for S-Gamut3/S-Log3 (0%, 18%, 90% code values 95, 420, 598).',
       enc: x => x >= 0.01125 ? (420 + log10((x + 0.01) / 0.19) * 261.5) / 1023 : (x * (171.2102946929 - 95) / 0.01125 + 95) / 1023,
       lin: y => y >= 171.2102946929 / 1023 ? Math.pow(10, (y * 1023 - 420) / 261.5) * 0.19 - 0.01 : (y * 1023 - 95) * 0.01125 / (171.2102946929 - 95)
     },
@@ -68,13 +68,13 @@
     num(p.baseISO, 'Base ISO', 25, 409600);
     num(p.clipCV, 'Clip level', 1, 1023);
     num(p.greyCV, 'Middle gray', 1, 1022);
-    num(p.dr2, 'Range at SNR 2', 1, 20);
-    num(p.dr1, 'Range at SNR 1', 1, 20);
+    const noFloor = p.floorKnown === false;
+    if (!noFloor) { num(p.dr2, 'Range at SNR 2', 1, 20); num(p.dr1, 'Range at SNR 1', 1, 20); }
     num(p.greyBand, 'Gray band half-width', 0.02, 1);
     if (p.pictureStops != null) num(p.pictureStops, 'Picture zone', 0, 4);
     if (e.length) return e;
     if (p.greyCV >= p.clipCV) e.push('Middle gray must be below the clip level.');
-    if (p.dr1 < p.dr2) e.push('Range at SNR 1 must be at least the range at SNR 2.');
+    if (!noFloor && p.dr1 < p.dr2) e.push('Range at SNR 1 must be at least the range at SNR 2.');
     if (!Array.isArray(p.isoList) || !p.isoList.length || p.isoList.some(i => !(i >= 25 && i <= 409600))) e.push('ISO list must contain at least one valid ISO.');
     if (![17, 33, 65].includes(p.lutSize)) e.push('LUT size must be 17, 33 or 65.');
     return e;
@@ -88,17 +88,20 @@
     const baseClipLin = C.lin(p.clipCV / 1023);
     const clipLin = baseClipLin * k;
     const greyLin = C.lin(p.greyCV / 1023);
-    const floor2Lin = baseClipLin / Math.pow(2, p.dr2) * k;
-    const floor1Lin = baseClipLin / Math.pow(2, p.dr1) * k;
+    const noFloor = p.floorKnown === false, NO_FLOOR_ZONES = 4;
+    const picPre = Math.max(p.greyBand, p.pictureStops == null ? 1 : p.pictureStops);
+    // No noise data: cool colors count whole stops down from gray instead of up from a measured floor.
+    const floor2Lin = noFloor ? greyLin / Math.pow(2, picPre + NO_FLOOR_ZONES) : baseClipLin / Math.pow(2, p.dr2) * k;
+    const floor1Lin = noFloor ? floor2Lin : baseClipLin / Math.pow(2, p.dr1) * k;
     const clipEnc = C.enc(clipLin);
     const over = log2(clipLin / greyLin);
-    const under2 = log2(greyLin / floor2Lin);
-    const under1 = log2(greyLin / floor1Lin);
+    const under2 = noFloor ? NaN : log2(greyLin / floor2Lin);
+    const under1 = noFloor ? NaN : log2(greyLin / floor1Lin);
     const band = p.greyBand;
     // Keep at least `pic` stops either side of gray as picture (never less than the gray band itself).
     const pic = Math.max(band, p.pictureStops == null ? 1 : p.pictureStops);
     const nHi = Math.max(0, Math.min(PALETTE.hi.length, Math.floor(over - pic + 1e-9)));
-    const nLo = Math.max(0, Math.min(PALETTE.lo.length, Math.floor(under2 - pic + 1e-9)));
+    const nLo = noFloor ? NO_FLOOR_ZONES : Math.max(0, Math.min(PALETTE.lo.length, Math.floor(under2 - pic + 1e-9)));
     const cv = l => C.enc(l) * 1023;
     const zones = [];
     const add = (kind, n, label, loLin, hiLin, color) => zones.push({ kind, n, label, loLin, hiLin, loCV: loLin === -Infinity ? 0 : cv(loLin), hiCV: hiLin === Infinity ? 1023 : cv(hiLin), color });
@@ -109,14 +112,15 @@
     if (midTop > gUp) add('mid', 0, 'Picture (above gray)', gUp, midTop, null);
     add('grey', 0, 'Middle gray', Math.max(gDn, midBot), Math.min(gUp, midTop), PALETTE.grey);
     if (gDn > midBot) add('mid', 1, 'Picture (below gray)', midBot, gDn, null);
-    for (let i = nLo; i >= 1; i--) add('lo', i, `${i - 1} to ${i} stop${i > 1 ? 's' : ''} above floor`, floor2Lin * Math.pow(2, i - 1), floor2Lin * Math.pow(2, i), PALETTE.lo[i - 1]);
-    add('caution', 0, 'Noisy (SNR 1 to 2)', floor1Lin, floor2Lin, PALETTE.caution);
-    add('noise', 0, 'Below noise floor', -Infinity, floor1Lin, PALETTE.noise);
+    const fs = v => (Math.round(v * 10) / 10).toString();
+    for (let i = nLo; i >= 1; i--) add('lo', i, noFloor ? `${fs(pic + nLo - i)} to ${fs(pic + nLo - i + 1)} stops under gray` : `${i - 1} to ${i} stop${i > 1 ? 's' : ''} above floor`, floor2Lin * Math.pow(2, i - 1), floor2Lin * Math.pow(2, i), PALETTE.lo[i - 1]);
+    if (!noFloor) add('caution', 0, 'Noisy (SNR 1 to 2)', floor1Lin, floor2Lin, PALETTE.caution);
+    add('noise', 0, noFloor ? `More than ${fs(pic + nLo)} stops under gray` : 'Below noise floor', -Infinity, floor1Lin, PALETTE.noise);
     return {
       iso, shift, curve: C, clipLin, greyLin, floor2Lin, floor1Lin, clipEnc,
       clipCV: clipEnc * 1023, clipOutOfRange: clipEnc > 1,
       greyCV: p.greyCV, floor2CV: cv(floor2Lin), floor1CV: cv(floor1Lin),
-      over, under2, under1, band, nHi, nLo, zones
+      over, under2, under1, band, nHi, nLo, zones, noFloor
     };
   }
 
@@ -197,7 +201,8 @@
     const rows = models.map(m => {
       const t = clipThreshold(m, p.lutSize, opts.conservativeClip) * 1023;
       const early = Math.log2(m.clipLin / C.lin(t / 1023));
-      return `<tr><td>${m.iso}</td><td>${m.clipOutOfRange ? 'above 1023' : f0(m.clipCV)}</td><td>+${f1(m.over)}</td><td>${f1(m.under2)}</td><td>${f1(m.under1)}</td><td>${f0(t)} (${early.toFixed(2)} stop early)</td></tr>`;
+      const u = v => isFinite(v) ? f1(v) : 'not measured';
+      return `<tr><td>${m.iso}</td><td>${m.clipOutOfRange ? 'above 1023' : f0(m.clipCV)}</td><td>+${f1(m.over)}</td><td>${u(m.under2)}</td><td>${u(m.under1)}</td><td>${f0(t)} (${early.toFixed(2)} stop early)</td></tr>`;
     }).join('');
     const legend = models.map(m => `<h3>ISO ${m.iso}</h3><table><tr><th></th><th>Zone</th><th>Code values (full)</th><th>On a legal SDI waveform</th></tr>` +
       m.zones.map(z => `<tr><td><span class="sw" style="background:${z.color || 'linear-gradient(#bbb,#555)'}"></span></td><td>${esc(z.label)}</td><td>${f0(Math.max(0, z.loCV))} to ${f0(Math.min(1023, z.hiCV))}</td><td>${f0(fullToLegalCV(Math.max(0, z.loCV)))} to ${f0(fullToLegalCV(Math.min(1023, z.hiCV)))}</td></tr>`).join('') + '</table>').join('');
@@ -207,12 +212,12 @@
 <p><b>${esc(p.make)} ${esc(p.model)}</b>, ${esc(C.name)}, base ISO ${p.baseISO}. Generated ${esc(opts.date || '')}.</p>
 ${C.verified ? '' : '<p class="w">The formula for this log curve has not yet been checked against the manufacturer\'s document. Verify zone positions before relying on these LUTs.</p>'}
 <h2>Profile</h2>
-<table><tr><th>Clip level at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Metered middle gray</th><td>${f0(p.greyCV)}</td></tr><tr><th>Range below clip at SNR 2</th><td>${p.dr2} stops</td></tr><tr><th>Range below clip at SNR 1</th><td>${p.dr1} stops</td></tr><tr><th>Clip moves with ISO</th><td>${p.isoShifts ? 'Yes' : 'No'}</td></tr><tr><th>Gray band</th><td>plus or minus ${p.greyBand.toFixed(2)} stop</td></tr><tr><th>Picture zone</th><td>at least ${(p.pictureStops == null ? 1 : p.pictureStops)} stop(s) either side of gray</td></tr></table>
+<table><tr><th>Clip level at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Metered middle gray</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured. Cool colors count stops under gray.</td></tr>' : `<tr><th>Range below clip at SNR 2</th><td>${p.dr2} stops</td></tr><tr><th>Range below clip at SNR 1</th><td>${p.dr1} stops</td></tr>`}<tr><th>Clip moves with ISO</th><td>${p.isoShifts ? 'Yes' : 'No'}</td></tr><tr><th>Gray band</th><td>plus or minus ${p.greyBand.toFixed(2)} stop</td></tr><tr><th>Picture zone</th><td>at least ${(p.pictureStops == null ? 1 : p.pictureStops)} stop(s) either side of gray</td></tr></table>
 <h2>Headroom by ISO</h2>
 <table><tr><th>ISO</th><th>Clip (code value)</th><th>Stops over gray</th><th>Stops under gray to SNR 2</th><th>to SNR 1</th><th>Clip color starts at (${p.lutSize}-point LUT)</th></tr>${rows}</table>
 <p>Only the base ISO row uses measured values. Other ISOs are calculated by shifting clip and floor by the ISO difference in stops.</p>
 <h2>How to read the LUT</h2>
-<ul><li>Warm colors count down from clip, judged on the brightest of the three channels.</li><li>Cool colors count up from the SNR 2 noise floor, judged on luma.</li><li>Green is metered middle gray. Between the colored zones the picture shows in gray.</li><li>Each LUT is valid for one ISO only. Using a higher-ISO LUT at a lower ISO setting can hide clipping.</li></ul>
+<ul><li>Warm colors count down from clip, judged on the brightest of the three channels.</li><li>${p.floorKnown === false ? 'Cool colors count whole stops down from gray, judged on luma (no noise floor data for this camera).' : 'Cool colors count up from the SNR 2 noise floor, judged on luma.'}</li><li>Green is metered middle gray. Between the colored zones the picture shows in gray.</li><li>Each LUT is valid for one ISO only. Using a higher-ISO LUT at a lower ISO setting can hide clipping.</li></ul>
 <h2>Files</h2>
 <ul><li><b>Full</b>: for an in-camera LUT slot, or any device that scales its own output.</li><li><b>OmniScope (.tfc4)</b>: preset for the Nobe OmniScope false color scope. It works on luma only, so it cannot flag a single clipped channel the way the LUT does.</li><li><b>Legal</b>: same LUT with output colors scaled to 64-940, for a device that writes LUT output straight to SDI.</li>${opts.inputLegal ? '<li>These LUTs were built for a legal-scaled input signal that the device does not expand.</li>' : ''}</ul>
 <h2>Range check before trusting it on set</h2>

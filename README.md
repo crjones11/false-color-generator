@@ -23,7 +23,8 @@ Each LUT is valid for one ISO only. Using a higher-ISO LUT at a lower ISO settin
 ## Status
 
 - RED Log3G10 is checked against Nikon ZR frames at four ISOs.
-- ARRI LogC3 (EI 800 only), ARRI LogC4, Sony S-Log3 and Blackmagic Film Gen 5 are implemented but **not yet verified** against the manufacturers' documents. The page flags them.
+- Sony S-Log3 is checked against Sony's Technical Summary for S-Gamut3/S-Log3 (code values 95, 420 and 598 for 0%, 18% and 90%).
+- ARRI LogC3 (EI 800 only), ARRI LogC4 and Blackmagic Film Gen 5 are implemented but **not yet verified** against the manufacturers' documents. The page flags them.
 - The LUTs have been checked in software against real frames, not yet on a camera or monitor.
 
 ## Adding a camera
@@ -33,6 +34,8 @@ Camera data lives in `cameras.js`. In the app, open **Camera data**, type the nu
 - Imatest "max=" value, and the "0.5 (Medium)" and "1.0 (Low)" dynamic range rows
 - metered 18% gray as a 10-bit full-range code value
 - the ISOs the circuit covers, and whether the clip point moves with ISO (confirm with one frame at a non-base ISO)
+
+For a camera with no Imatest data, enter the clip level as a code value and tick **No noise data**. Cool colors then count whole stops down from gray instead of up from a measured noise floor.
 
 ## Development
 
@@ -46,10 +49,6 @@ node build.js   # inlines engine.js and cameras.js into index.html
 - `engine.js` curves, zone model, LUT, report and zip writers
 - `cameras.js` camera database
 - `index.src.html` page source; `index.html` is the built single-file app
-
-## Disclaimer
-
-Provided as is, with no warranty. The LUTs are an exposure aid, not a guarantee: check the clip color against your camera's own clip indicator before relying on them on set (the report includes the procedure).
 
 ## Credits
 

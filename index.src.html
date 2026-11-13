@@ -133,10 +133,11 @@ footer a{color:#b9c2d6}
     <div class="row one"><div><label for="clipMax"><span class="n">1</span> "max=" value in the Density response box</label>
       <div class="pair"><input id="clipMax" inputmode="numeric"><span>of</span><input id="clipOf" inputmode="numeric"></div></div></div>
     <p class="hint" id="clipCalc"></p>
-    <div class="row">
+    <div class="row" id="drRow">
       <div><label for="dr2"><span class="n">2</span> "0.5 (Medium)" row</label><input id="dr2" inputmode="decimal"></div>
       <div><label for="dr1"><span class="n">3</span> "1.0 (Low)" row</label><input id="dr1" inputmode="decimal"></div>
     </div>
+    <label class="check"><input type="checkbox" id="noFloor"><span>No noise data for this camera: count cool colors down from gray instead of up from the noise floor.</span></label>
     <label class="check"><input type="checkbox" id="clipManual"><span>No Imatest sheet for the clip level: enter it as a code value instead.</span></label>
     <div class="row" id="manualClip" hidden>
       <div><label for="clipCV">Clip level (10-bit code value)</label><input id="clipCV" inputmode="decimal"></div>
@@ -195,7 +196,7 @@ footer a{color:#b9c2d6}
 const $ = id => document.getElementById(id);
 const DB = (typeof FCG_CAMERAS !== 'undefined' ? FCG_CAMERAS : []);
 const DEFAULTS = {greyBand:0.17, pictureStops:1, lutSize:33, conservativeClip:true, inputLegal:false};
-const DATA_IDS = ['make','model','curve','baseISO','isoShifts','clipMax','clipOf','dr2','dr1','clipManual','clipCV','clipRange','greyCV','greyRange'];
+const DATA_IDS = ['make','model','curve','baseISO','isoShifts','clipMax','clipOf','dr2','dr1','noFloor','clipManual','clipCV','clipRange','greyCV','greyRange'];
 const KEY = 'fcg.state.v2';
 let activeISO = null;
 
@@ -206,7 +207,7 @@ DB.forEach((c,i)=>{ const o=document.createElement('option'); o.value=String(i);
 function fromDB(ci, ki){
   const c=DB[ci], k=c.circuits[ki];
   return {credit:c.credit||null, make:c.make, model:c.model, curve:c.curve, baseISO:k.baseISO, isoList:k.isos.slice(), isoShifts:k.isoShifts!==false,
-    clipSource:k.clipMax?'imatest':'cv', clipMax:k.clipMax||null, clipOf:k.clipOf||65535, clipCV:k.clipMax?k.clipMax/(k.clipOf||65535)*1023:k.clipCV, greyCV:k.grayCV, dr2:k.dr2, dr1:k.dr1};
+    clipSource:k.clipMax?'imatest':'cv', clipMax:k.clipMax||null, clipOf:k.clipOf||65535, clipCV:k.clipMax?k.clipMax/(k.clipOf||65535)*1023:k.clipCV, greyCV:k.grayCV, dr2:k.dr2, dr1:k.dr1, floorKnown:k.dr2!=null};
 }
 function fillCircuits(ci){
   const sel=$('circSel'); sel.textContent='';
@@ -226,7 +227,7 @@ function setData(p){
   const man = p.clipSource==='cv' || !(p.clipMax>0);
   $('clipManual').checked=man;
   $('clipMax').value=p.clipMax||''; $('clipOf').value=p.clipOf||65535; $('clipCV').value=Math.round(p.clipCV*10)/10; $('clipRange').value='full';
-  $('greyCV').value=p.greyCV; $('greyRange').value='full'; $('dr2').value=p.dr2; $('dr1').value=p.dr1;
+  $('greyCV').value=p.greyCV; $('greyRange').value='full'; $('dr2').value=isFinite(p.dr2)?p.dr2:''; $('dr1').value=isFinite(p.dr1)?p.dr1:''; $('noFloor').checked=p.floorKnown===false;
   activeISO=null; update();
 }
 function setOptions(o){
@@ -246,12 +247,13 @@ function readForm(){
     baseISO:num('baseISO'),
     isoList:$('isoList').value.split(/[,\s]+/).filter(Boolean).map(Number),
     isoShifts:$('isoShifts').checked,
-    clipCV, greyCV:toFull(num('greyCV'),'greyRange'), dr2:num('dr2'), dr1:num('dr1'),
+    clipCV, greyCV:toFull(num('greyCV'),'greyRange'), dr2:num('dr2'), dr1:num('dr1'), floorKnown:!$('noFloor').checked,
     greyBand:num('greyBand'), pictureStops:num('pictureStops'), lutSize:parseInt($('lutSize').value,10),
     conservativeClip:$('conservativeClip').checked, inputLegal:$('inputLegal').checked
   };
 }
 function update(){
+  $('drRow').hidden = $('noFloor').checked;
   $('manualClip').hidden = !$('clipManual').checked; $('clipMax').disabled = $('clipOf').disabled = $('clipManual').checked;
   const p = readForm(), errs = FCG.validate(p), c = FCG.CURVES[p.curve], ci=$('camSel').value;
   $('clipCalc').textContent = isFinite(p.clipCV) ? `Clip level = code value ${p.clipCV.toFixed(1)} on the 10-bit full-range scale` + (p.clipSource==='imatest' ? ` (${p.clipMax} / ${p.clipOf} x 1023).` : '.') : '';
@@ -260,7 +262,7 @@ function update(){
   if(ci!=='custom'){ const k=DB[ci].circuits[$('circSel').value||0], s=k.sources||{}; $('camInfo').textContent = [c?c.name:'', s.range&&('Range: '+s.range), s.gray&&('Gray: '+s.gray), s.iso&&('ISO: '+s.iso)].filter(Boolean).join('\n'); }
   else $('camInfo').textContent = 'Custom camera: enter its data under "Camera data".';
   $('dbEntry').value = JSON.stringify({ make:p.make, model:p.model, curve:p.curve, circuit:{ name:`Base ISO ${p.baseISO}`, baseISO:p.baseISO, isos:p.isoList, isoShifts:p.isoShifts,
-    ...(p.clipSource==='imatest' ? {clipMax:p.clipMax, clipOf:p.clipOf} : {clipCV:Math.round(p.clipCV*10)/10}), dr2:p.dr2, dr1:p.dr1, grayCV:Math.round(p.greyCV*10)/10, sources:{range:'', gray:'', iso:''} } }, null, 2);
+    ...(p.clipSource==='imatest' ? {clipMax:p.clipMax, clipOf:p.clipOf} : {clipCV:Math.round(p.clipCV*10)/10}), ...(p.floorKnown===false ? {} : {dr2:p.dr2, dr1:p.dr1}), grayCV:Math.round(p.greyCV*10)/10, sources:{range:'', gray:'', iso:''} } }, null, 2);
   const ul=$('errors'); ul.textContent=''; errs.forEach(e=>{const li=document.createElement('li'); li.textContent=e; ul.appendChild(li);});
   $('exportBtn').disabled = errs.length>0;
   if (errs.length) { render(null,null); return; }
@@ -277,7 +279,7 @@ function render(p, models){
   models.forEach(m=>{ const b=el('button',{type:'button'},'ISO '+m.iso); if(m.iso===activeISO) b.className='on'; b.onclick=()=>{activeISO=m.iso; render(p,models);}; tabs.appendChild(b); });
   const m = models.find(x=>x.iso===activeISO) || models[0];
   const stat=(v,l)=>{ const d=el('div'); d.appendChild(el('b',null,v)); d.appendChild(el('span',null,l)); big.appendChild(d); };
-  stat('+'+m.over.toFixed(1), 'stops over gray to clip'); stat(m.under2.toFixed(1), 'stops under gray to SNR 2'); stat(m.under1.toFixed(1), 'to SNR 1'); stat(m.clipOutOfRange?'>1023':String(Math.round(m.clipCV)), 'clip code value');
+  stat('+'+m.over.toFixed(1), 'stops over gray to clip'); if(m.noFloor) stat('n/a','noise floor not measured'); else { stat(m.under2.toFixed(1), 'stops under gray to SNR 2'); stat(m.under1.toFixed(1), 'to SNR 1'); } stat(m.clipOutOfRange?'>1023':String(Math.round(m.clipCV)), 'clip code value');
   // strip
   const pct = cv => Math.min(100, Math.max(0, cv/1023*100));
   m.zones.forEach(z=>{
@@ -305,7 +307,7 @@ function render(p, models){
   $('modelWarn').textContent=warns.join(' ');
   // headroom table
   const h2=el('tr'); ['ISO','Clip','Over gray','Under (SNR 2)','Under (SNR 1)','Floor SNR 2','Floor SNR 1'].forEach((h,i)=>h2.appendChild(el('th',i?{class:'num'}:null,h))); head.appendChild(h2);
-  models.forEach(x=>{ const tr=el('tr'); [String(x.iso)+(x.iso===p.baseISO?' (base)':''), x.clipOutOfRange?'>1023':Math.round(x.clipCV), '+'+x.over.toFixed(1), x.under2.toFixed(1), x.under1.toFixed(1), Math.round(x.floor2CV), Math.round(x.floor1CV)].forEach((v,i)=>tr.appendChild(el('td',i?{class:'num'}:null,String(v)))); head.appendChild(tr); });
+  models.forEach(x=>{ const tr=el('tr'); [String(x.iso)+(x.iso===p.baseISO?' (base)':''), x.clipOutOfRange?'>1023':Math.round(x.clipCV), '+'+x.over.toFixed(1)].concat(x.noFloor ? ['n/a','n/a','n/a','n/a'] : [x.under2.toFixed(1), x.under1.toFixed(1), Math.round(x.floor2CV), Math.round(x.floor1CV)]).forEach((v,i)=>tr.appendChild(el('td',i?{class:'num'}:null,String(v)))); head.appendChild(tr); });
 }
 
 $('camSel').addEventListener('change', e=>selectCamera(e.target.value==='custom'?'custom':+e.target.value, 0));
@@ -355,7 +357,7 @@ $('exportBtn').addEventListener('click', async ()=>{
     f.appendChild(document.createTextNode(`${c.make} ${c.model} from the `));
     const a=document.createElement('a'); a.href=k.url; a.target='_blank'; a.rel='noopener'; a.textContent=`${k.org} ${k.title}`; f.appendChild(a);
     f.appendChild(document.createTextNode(`, tested by ${k.tester}`)); });
-  f.appendChild(document.createTextNode('. Middle gray and ISO behavior measured separately for this app. Not affiliated with or endorsed by the sources credited. Provided as is, with no warranty: check the LUT against your camera\'s own clip indicator before relying on it on set.'));
+  f.appendChild(document.createTextNode('. Middle gray and ISO behavior measured separately for this app. Not affiliated with or endorsed by the sources credited.'));
 })();
 setOptions(DEFAULTS);
 let restored=false;

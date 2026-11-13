@@ -93,6 +93,19 @@ ok(ex.zip[0] === 0x50 && ex.zip[1] === 0x4B, 'zip signature');
 ok(F.crc32(new TextEncoder().encode('123456789')) === 0xCBF43926, 'crc32 check value');
 ok(!/<script>/.test(F.makeReport(Object.assign({}, zr, { model: '<script>x</script>' }), [m800], {})), 'report escapes HTML');
 ok(/Gunther Machu/.test(F.makeReport(Object.assign({}, zr, { credit: { org: 'CineD', tester: 'Gunther Machu', title: 'Nikon ZR Lab Test', url: 'https://www.cined.com/x' } }), [m800], {})), 'report credits the tester');
+// no-floor mode (camera without Imatest data)
+{ const nf = Object.assign({}, zr, { floorKnown: false, dr2: NaN, dr1: NaN, pictureStops: 1 });
+  ok(F.validate(nf).length === 0, 'no-floor profile valid without DR figures');
+  const m = F.buildModel(nf, 800);
+  ok(m.nLo === 4 && isNaN(m.under2) && !m.zones.some(z => z.kind === 'caution'), 'no-floor: 4 cool zones, no caution zone');
+  const lo = m.zones.filter(z => z.kind === 'lo');
+  near(Math.log2(m.greyLin / lo[0].hiLin), 1, 1e-9, 'first cool zone starts 1 stop under gray');
+  ok(lo[0].label === '1 to 2 stops under gray' && /More than 5 stops/.test(m.zones[m.zones.length - 1].label), 'no-floor labels');
+  for (let i = 1; i < m.zones.length; i++) near(m.zones[i].hiLin, m.zones[i - 1].loLin, 1e-12, 'no-floor zones contiguous');
+  ok(/Not measured/.test(F.makeReport(nf, [m], {})), 'report says floor not measured');
+  F.makeCube(m, { size: 17, output: 'full', title: 't' }); F.makeTfc4(m); }
+// S-Log3 against Sony's published 90% value
+near(F.CURVES.slog3.enc(0.9) * 1023, 598, 0.5, 'S-Log3 90% white');
 // validation
 ok(F.validate(Object.assign({}, zr, { greyCV: 800 })).length > 0, 'grey above clip rejected');
 ok(F.validate(Object.assign({}, zr, { dr1: 9 })).length > 0, 'SNR1 < SNR2 rejected');
