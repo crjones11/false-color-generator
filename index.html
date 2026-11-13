@@ -76,6 +76,7 @@ footer a{color:#b9c2d6}
 .hd{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .coffee-btn{margin-left:auto;font-weight:700;letter-spacing:.5px;font-size:12px;text-transform:uppercase;text-decoration:none;color:#f2c94c;border:1px solid #f2c94c;padding:6px 12px;border-radius:4px;white-space:nowrap}
 .coffee-btn:hover{background:rgba(242,201,76,.12)}.coffee-btn:active{opacity:.85}
+.btnlink{display:inline-block;font:inherit;border-radius:7px;border:1px solid #4a7dff;background:#1d2a4a;color:#cfdcff;padding:8px 12px;text-decoration:none}.btnlink:hover{background:#26375f}
 </style>
 </head>
 <body>
@@ -152,9 +153,11 @@ footer a{color:#b9c2d6}
     </div>
 
     <h3>Database entry for this circuit</h3>
+    <p class="hint" style="margin:0 0 8px">"Submit" opens a pre-filled issue on the project's GitHub page (a free GitHub account is needed). Nothing is sent until you post it. Add where the numbers came from so the camera can be verified and added for everyone.</p>
     <textarea id="dbEntry" readonly spellcheck="false"></textarea>
     <div class="btns" style="margin-top:8px">
       <button type="button" id="copyEntry">Copy entry</button>
+      <a id="submitCam" class="btnlink" href="#" target="_blank" rel="noopener">Submit this camera for review</a>
       <button type="button" id="importBtn">Load profile.json</button>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
@@ -560,6 +563,11 @@ function update(){
   else $('camInfo').textContent = 'Custom camera: enter its data under "Camera data".';
   $('dbEntry').value = JSON.stringify({ make:p.make, model:p.model, curve:p.curve, circuit:{ name:`Base ISO ${p.baseISO}`, baseISO:p.baseISO, isos:p.isoList, isoShifts:p.isoShifts,
     ...(p.clipSource==='imatest' ? {clipMax:p.clipMax, clipOf:p.clipOf} : {clipCV:Math.round(p.clipCV*10)/10}), ...(p.floorKnown===false ? {} : {dr2:p.dr2, dr1:p.dr1}), grayCV:Math.round(p.greyCV*10)/10, sources:{range:'', gray:'', iso:''} } }, null, 2);
+  { const entry=$('dbEntry').value, title=`[Camera] ${p.make||'Unknown'} ${p.model||''} ${c?c.short:''}, base ISO ${isFinite(p.baseISO)?p.baseISO:'?'}`.replace(/\s+/g,' ').trim();
+    const body=['Camera data submitted from the False Color Generator.','',
+      '**Recording mode / codec:** ','**Where the clip and dynamic range figures came from (link if possible):** ','**How middle gray was measured (meter, chart, signal path, full or legal):** ','**Non-base ISO or EI tested? What changed?** ','',
+      '```json',entry,'```'].join('\n');
+    $('submitCam').href='https://github.com/crjones11/false-color-generator/issues/new?title='+encodeURIComponent(title)+'&body='+encodeURIComponent(body); }
   const ul=$('errors'); ul.textContent=''; errs.forEach(e=>{const li=document.createElement('li'); li.textContent=e; ul.appendChild(li);});
   $('exportBtn').disabled = errs.length>0;
   if (errs.length) { render(null,null); return; }

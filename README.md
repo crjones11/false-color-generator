@@ -35,6 +35,8 @@ Camera data lives in `cameras.js`. In the app, open **Camera data**, type the nu
 - metered 18% gray as a 10-bit full-range code value
 - the ISOs the circuit covers, and whether the clip point moves with ISO (confirm with one frame at a non-base ISO)
 
+To suggest a camera for the built-in list, use **Submit this camera for review** in the same panel. It opens a pre-filled GitHub issue with the data; add where the numbers came from so they can be checked.
+
 For a camera with no Imatest data, enter the clip level as a code value and tick **No noise data**. The LUT then has no shadow colors: below gray the picture shows in gray, since there is no measurement to base them on.
 
 ## Development
