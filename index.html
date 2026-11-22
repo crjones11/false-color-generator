@@ -9,8 +9,8 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
 header{padding:18px 24px 6px;max-width:1240px;margin:0 auto}
-h1{font-size:20px;margin:0;letter-spacing:.2px}
-header p{margin:4px 0 0;color:var(--dim)}
+h1{font-size:26px;line-height:1.15;margin:0;letter-spacing:-.2px;font-weight:700}
+header p{margin:6px 0 0;color:var(--dim);font-size:14px;max-width:640px}
 main{display:grid;grid-template-columns:minmax(320px,440px) 1fr;gap:20px;max-width:1240px;margin:0 auto;padding:14px 24px 40px}
 @media(max-width:860px){main{grid-template-columns:1fr}}
 section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
@@ -73,18 +73,21 @@ footer{max-width:1240px;margin:0 auto;padding:0 24px 36px;color:var(--dim);font-
 footer a{color:#b9c2d6}
 .pz{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px}.pz .tabs{margin:0}
 .pz label{margin:0;font-size:13px;color:var(--text)}.pz input{width:70px;display:inline-block;margin:0 4px;padding:5px 7px}
-.hd{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.coffee-btn{margin-left:auto;font-weight:700;letter-spacing:.5px;font-size:12px;text-transform:uppercase;text-decoration:none;color:#f2c94c;border:1px solid #f2c94c;padding:6px 12px;border-radius:4px;white-space:nowrap}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.coffee-btn{flex:none;font-weight:600;font-size:12px;text-decoration:none;color:#f2c94c;border:1px solid rgba(242,201,76,.55);padding:5px 10px;border-radius:999px;white-space:nowrap}
 .coffee-btn:hover{background:rgba(242,201,76,.12)}.coffee-btn:active{opacity:.85}
 .btnlink{display:inline-block;font:inherit;border-radius:7px;border:1px solid #4a7dff;background:#1d2a4a;color:#cfdcff;padding:8px 12px;text-decoration:none}.btnlink:hover{background:#26375f}
 #baseTabs:empty{display:none}#baseTabs{margin-bottom:8px}#baseTabs button{font-weight:600}
 #baseTabs .lbl{font-size:12px;color:var(--dim);align-self:center;margin-right:4px}
+@media(max-width:560px){.preview{grid-template-columns:1fr!important}.stripwrap{height:300px!important}#legend{display:table}header{padding:16px 16px 4px}h1{font-size:22px}header p{font-size:13px}.coffee-btn{font-size:11px;padding:4px 9px}.coffee-btn .lbl{display:none}main{padding:12px 16px 32px}}
+main>div{min-width:0}select{min-width:0;text-overflow:ellipsis}.row>div{min-width:0}
+#legend,#headroom{display:block;overflow-x:auto}
 </style>
 </head>
 <body>
 <header>
   <div class="hd"><h1>False Color Generator</h1>
-  <a href="https://venmo.com/codyjonescolor" target="_blank" rel="noopener" class="coffee-btn" title="Tip the developer via Venmo">&#9749; Buy me a coffee</a></div>
+  <a href="https://venmo.com/codyjonescolor" target="_blank" rel="noopener" class="coffee-btn" title="Tip the developer via Venmo">&#9749; <span class="lbl">Buy me a </span>coffee</a></div>
   <p>Clip-anchored false color LUTs from a camera profile. Warm colors count down to clip, cool colors count up from the noise floor.</p>
 </header>
 <main>
@@ -104,7 +107,7 @@ footer a{color:#b9c2d6}
     <ul id="errors"></ul>
     <button class="primary" id="exportBtn" type="button">Export LUT set (.zip)</button>
     <div id="status"></div>
-    <p class="note">Each ISO gets a Full and a Legal LUT. Full is for in-camera slots and devices that scale their own output; Legal has the output colors scaled to 64-940. A report and an OmniScope preset (untested) are included.</p>
+    <p class="note">Each ISO gets a Full and a Legal LUT. Full is for in-camera slots and devices that scale their own output; Legal has the output colors scaled to 64-940. A report and an OmniScope preset are included.</p>
   </section>
 
   <details class="box">
