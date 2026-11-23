@@ -16,6 +16,21 @@ near(F.CURVES.slog3.enc(0) * 1023, 95, 0.01, 'S-Log3 black');
 near(F.CURVES.logc4.enc(0.18), 0.2784, 0.0005, 'LogC4 18% grey');
 near(F.CURVES.logc4.enc(0) * 1023, 95, 0.01, 'LogC4 black');
 near(F.CURVES.bmdgen5.enc(0.18), 0.3836, 0.0005, 'BMD Gen5 18% grey');
+// Manufacturer-published 0% / 18% / 90% code values (10-bit), within 0.6 CV
+const pub = { vlog: [128, 433, 602], flog: [95, 470, 705], flog2: [95, 400, 570], dlog: [95, 408, 586], slog3: [95, 420, 598] };
+for (const [k, v] of Object.entries(pub)) [0, 0.18, 0.9].forEach((x, i) => near(F.CURVES[k].enc(x) * 1023, v[i], 0.6, `${k} published ${x * 100}%`));
+near(F.CURVES.clog3.enc(0.18) * 1023, 351, 0.6, 'Canon Log 3 18% (Canon HDR white paper)');
+near(F.CURVES.clog2.enc(0.18) * 1023, 407, 0.6, 'Canon Log 2 18% (Canon HDR white paper)');
+near(F.CURVES.nlog.enc(0.18) * 1023, 372, 0.6, 'N-Log 18% (Nikon: around 372)');
+near(F.CURVES.kinelog3.enc(0.18), 0.392, 0.0006, 'KineLOG3 18%');
+near(F.CURVES.kinelog3.enc(0.9), 0.572, 0.0006, 'KineLOG3 90%');
+for (const ei of F.CURVES.logc3.eis) { const C = F.curveAt('logc3', ei); near(C.enc(0.18), 400 / 1023, 0.0006, `LogC3 EI ${ei} gray at 400`); near(C.lin(C.enc(3)), 3, 1e-9, `LogC3 EI ${ei} round trip`); }
+ok(F.curveAt('logc3', 1600).enc(0.18 * 64) > F.curveAt('logc3', 800).enc(0.18 * 64) === false, 'LogC3: a higher EI puts the same highlight lower');
+{ const a = { make: 'ARRI', model: 'Mini LF', curve: 'logc3', baseISO: 800, clipCV: 1000, greyCV: 400, floorKnown: false, isoList: [800, 3200], isoMode: 'clip', greyBand: 0.17, lutSize: 33 };
+  ok(F.validate(a).some(e => /EI 160/.test(e)), 'LogC3 rejects EI 3200');
+  for (const md of ['gray', 'none']) ok(F.validate(Object.assign({}, a, { isoList: [800], isoMode: md })).some(e => /bakes the EI/.test(e)), `LogC3 rejects isoMode ${md}`); a.isoList = [400, 800, 1600]; ok(F.validate(a).length === 0, 'LogC3 accepts 400-1600');
+  const m4 = F.buildModel(a, 1600), m8 = F.buildModel(a, 800);
+  near(m4.greyCV, 400, 0.5, 'LogC3 EI 1600 keeps gray at 400'); near(m4.over - m8.over, 1, 1e-9, 'LogC3 EI 1600 has one more stop over gray'); }
 
 // 2. ZR profile, low circuit, against measurements from the frames
 const zr = { make: 'Nikon', model: 'ZR', curve: 'log3g10', baseISO: 800, clipCV: 792, greyCV: 406, dr2: 10.2, dr1: 11.5, isoList: [800, 1600], isoShifts: true, greyBand: 1 / 6, pictureStops: 0, lutSize: 33, conservativeClip: true, inputLegal: false };

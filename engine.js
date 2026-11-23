@@ -19,31 +19,132 @@
     };
   })();
 
+  // LogC3 is a family of curves, one per EI. ARRI "ALEXA Log C Curve, Usage in VFX" (2017), SUP 3.x, exposure values.
+  // [cut, a, b, c, d, e, f]. ARRI: the formula cannot express EIs above 1600.
+  const LOGC3_EI = {
+    160: [0.005561, 5.555556, 0.080216, 0.269036, 0.381991, 5.842037, 0.092778],
+    200: [0.006208, 5.555556, 0.076621, 0.266007, 0.382478, 5.776265, 0.092782],
+    250: [0.006871, 5.555556, 0.072941, 0.262978, 0.382966, 5.710494, 0.092786],
+    320: [0.007622, 5.555556, 0.068768, 0.259627, 0.383508, 5.637732, 0.092791],
+    400: [0.008318, 5.555556, 0.064901, 0.256598, 0.383999, 5.571960, 0.092795],
+    500: [0.009031, 5.555556, 0.060939, 0.253569, 0.384493, 5.506188, 0.092800],
+    640: [0.009840, 5.555556, 0.056443, 0.250219, 0.385040, 5.433426, 0.092805],
+    800: [0.010591, 5.555556, 0.052272, 0.247190, 0.385537, 5.367655, 0.092809],
+    1000: [0.011361, 5.555556, 0.047996, 0.244161, 0.386036, 5.301883, 0.092814],
+    1280: [0.012235, 5.555556, 0.043137, 0.240810, 0.386590, 5.229121, 0.092819],
+    1600: [0.013047, 5.555556, 0.038625, 0.237781, 0.387093, 5.163350, 0.092824]
+  };
+  const logc3At = ei => {
+    const [cut, a, b, c, d, e, f] = LOGC3_EI[ei];
+    return {
+      enc: x => x > cut ? c * log10(a * x + b) + d : e * x + f,
+      lin: y => y > e * cut + f ? (Math.pow(10, (y - d) / c) - b) / a : (y - f) / e
+    };
+  };
+  // Canon Log 2 / 3 v1.2 work in "reflection" where 0.18 is an 18% card; Canon's scene axis is reflection / 0.9.
+  const clog2 = {
+    enc: x => { x /= 0.9; const k = 0.24136077, m = 87.09937546, o = 0.092864125; return x < 0 ? -(k * log10(-x * m + 1)) + o : k * log10(x * m + 1) + o; },
+    lin: y => { const k = 0.24136077, m = 87.09937546, o = 0.092864125; return 0.9 * (y < o ? -(Math.pow(10, (o - y) / k) - 1) / m : (Math.pow(10, (y - o) / k) - 1) / m); }
+  };
+  const clog3 = (() => {
+    const k = 0.36726845, m = 14.98325, s = 1.9754798, so = 0.12512219, hi = 0.12240537, lo = 0.12783901;
+    const lin = y => 0.9 * (y < 0.097465473 ? -(Math.pow(10, (lo - y) / k) - 1) / m : y <= 0.15277891 ? (y - so) / s : (Math.pow(10, (y - hi) / k) - 1) / m);
+    const xLo = lin(0.097465473) / 0.9, xHi = lin(0.15277891) / 0.9;
+    return { lin, enc: x => { x /= 0.9; return x < xLo ? -k * log10(-x * m + 1) + lo : x <= xHi ? s * x + so : k * log10(x * m + 1) + hi; } };
+  })();
+  const flog = (K) => ({
+    enc: x => x < K.cut1 ? K.e * x + K.f : K.c * log10(K.a * x + K.b) + K.d,
+    lin: y => y < K.cut2 ? (y - K.f) / K.e : (Math.pow(10, (y - K.d) / K.c) - K.b) / K.a
+  });
+
   const CURVES = {
     log3g10: {
       name: 'RED Log3G10', short: 'Log3G10', verified: true,
-      note: 'Checked against Nikon ZR frames at four ISOs.',
+      note: 'RED white paper formula. Also checked against Nikon ZR frames at four ISOs.',
       enc: x => { const v = x + 0.01; return v < 0 ? v * 15.1927 : 0.224282 * log10(v * 155.975327 + 1); },
       lin: y => y < 0 ? y / 15.1927 - 0.01 : (Math.pow(10, y / 0.224282) - 1) / 155.975327 - 0.01
     },
     logc3: {
-      name: 'ARRI LogC3 (EI 800)', short: 'LogC3', verified: false,
-      note: 'EI 800 constants only. LogC3 uses different constants at other EIs.',
-      enc: x => x > 0.010591 ? 0.247190 * log10(5.555556 * x + 0.052272) + 0.385537 : 5.367655 * x + 0.092809,
-      lin: y => y > 5.367655 * 0.010591 + 0.092809 ? (Math.pow(10, (y - 0.385537) / 0.247190) - 0.052272) / 5.555556 : (y - 0.092809) / 5.367655
+      name: 'ARRI LogC3', short: 'LogC3', verified: true, perEI: true, eis: Object.keys(LOGC3_EI).map(Number),
+      note: 'ARRI "ALEXA Log C Curve, Usage in VFX" (2017), SUP 3.x. One curve per EI, EI 160 to 1600. 18% gray = 400 at every EI.',
+      at: ei => logc3At(ei),
+      ...logc3At(800)
     },
-    logc4: { name: 'ARRI LogC4', short: 'LogC4', verified: false, note: '', enc: logc4.enc, lin: logc4.lin },
+    logc3_800: {
+      name: 'ARRI LogC3 (fixed EI 800 curve)', short: 'LogC3EI800', verified: true,
+      note: 'The EI 800 LogC3 curve at every ISO, as Panasonic and other non-ARRI cameras record it. 18% gray = 400.',
+      ...logc3At(800)
+    },
+    logc4: {
+      name: 'ARRI LogC4', short: 'LogC4', verified: true,
+      note: 'ARRI LogC4 Specification. One curve at every EI. 18% gray = 0.2784 (code 285).',
+      enc: logc4.enc, lin: logc4.lin
+    },
     slog3: {
-      name: 'Sony S-Log3', short: 'SLog3', verified: true, note: 'Checked against Sony\'s Technical Summary for S-Gamut3/S-Log3 (0%, 18%, 90% code values 95, 420, 598).',
+      name: 'Sony S-Log3', short: 'SLog3', verified: true, note: 'Sony Technical Summary for S-Gamut3/S-Log3 (0%, 18%, 90% code values 95, 420, 598).',
       enc: x => x >= 0.01125 ? (420 + log10((x + 0.01) / 0.19) * 261.5) / 1023 : (x * (171.2102946929 - 95) / 0.01125 + 95) / 1023,
       lin: y => y >= 171.2102946929 / 1023 ? Math.pow(10, (y * 1023 - 420) / 261.5) * 0.19 - 0.01 : (y * 1023 - 95) * 0.01125 / (171.2102946929 - 95)
     },
+    clog2: {
+      name: 'Canon Log 2', short: 'CLog2', verified: true,
+      note: 'Canon Log 2 v1.2. Canon HDR white paper: 18% gray = code 407 (39.8%).', enc: clog2.enc, lin: clog2.lin
+    },
+    clog3: {
+      name: 'Canon Log 3', short: 'CLog3', verified: true,
+      note: 'Canon Log 3 v1.2. Canon HDR white paper: 18% gray = code 351 (34.3%).', enc: clog3.enc, lin: clog3.lin
+    },
+    vlog: {
+      name: 'Panasonic V-Log', short: 'VLog', verified: true,
+      note: 'Panasonic V-Log/V-Gamut Reference Manual: 0%, 18%, 90% = code 128, 433, 602. Also covers V-Log L.',
+      enc: x => x < 0.01 ? 5.6 * x + 0.125 : 0.241514 * log10(x + 0.00873) + 0.598206,
+      lin: y => y < 0.181 ? (y - 0.125) / 5.6 : Math.pow(10, (y - 0.598206) / 0.241514) - 0.00873
+    },
+    flog: {
+      name: 'Fujifilm F-Log', short: 'FLog', verified: true,
+      note: 'Fujifilm F-Log Data Sheet: 0%, 18%, 90% = code 95, 470, 705.',
+      ...flog({ cut1: 0.00089, cut2: 0.100537775223865, a: 0.555556, b: 0.009468, c: 0.344676, d: 0.790453, e: 8.735631, f: 0.092864 })
+    },
+    flog2: {
+      name: 'Fujifilm F-Log2 / F-Log2 C', short: 'FLog2', verified: true,
+      note: 'Fujifilm F-Log2 Data Sheet: 0%, 18%, 90% = code 95, 400, 570. F-Log2 C uses the same curve with a different gamut.',
+      ...flog({ cut1: 0.000889, cut2: 0.100686685370811, a: 5.555556, b: 0.064829, c: 0.245281, d: 0.384316, e: 8.799461, f: 0.092864 })
+    },
+    nlog: {
+      name: 'Nikon N-Log', short: 'NLog', verified: true,
+      note: 'Nikon N-Log Specification 1.0.0. 18% gray = code 372 (Nikon: "around 372").',
+      enc: y => (y < 0.328 ? 650 * Math.cbrt(y + 0.0075) : 150 * Math.log(y) + 619) / 1023,
+      lin: x => { x *= 1023; return x < 452 ? Math.pow(x / 650, 3) - 0.0075 : Math.exp((x - 619) / 150); }
+    },
+    dlog: {
+      name: 'DJI D-Log', short: 'DLog', verified: true,
+      note: 'DJI D-Log/D-Gamut white paper: 0%, 18%, 90% = code 95, 408, 586. Not D-Log M.',
+      enc: x => x <= 0.0078 ? 6.025 * x + 0.0929 : log10(x * 0.9892 + 0.0108) * 0.256663 + 0.584555,
+      lin: y => y <= 0.14 ? (y - 0.0929) / 6.025 : (Math.pow(10, 3.89616 * y - 2.27752) - 0.0108) / 0.9892
+    },
+    kinelog3: {
+      name: 'Kinefinity KineLOG3', short: 'KineLog3', verified: true,
+      note: 'Kinefinity KineLOG3 Technical Specifications (2025): 18% = 0.392, 90% = 0.572.',
+      enc: x => x >= -0.008239 ? log10(66.64 * x + 1) * 0.296 * 0.907136 + 0.092864 : (x + 0.008239) / 0.017178,
+      lin: y => y >= 0 ? (Math.pow(10, (y - 0.092864) / 0.296 / 0.907136) - 1) / 66.64 : y * 0.017178 - 0.008239
+    },
     bmdgen5: {
-      name: 'Blackmagic Film Gen 5', short: 'BMDFilmG5', verified: false, note: '',
+      name: 'Blackmagic Film Gen 5', short: 'BMDFilmG5', verified: true,
+      note: 'Blackmagic Generation 5 Color Science document: 18% gray = 0.38356.',
       enc: x => x >= 0.005 ? 0.08692876065 * Math.log(x + 0.005494072432) + 0.5300133392 : 8.283605932 * x + 0.09246575342,
       lin: y => y >= 8.283605932 * 0.005 + 0.09246575342 ? Math.exp((y - 0.5300133392) / 0.08692876065) - 0.005494072432 : (y - 0.09246575342) / 8.283605932
     }
   };
+  // Curves a camera can record that have no published formula. Listed so the camera picker can say why.
+  const UNPUBLISHED_CURVES = {
+    zlog2: 'Z CAM Z-Log2', dlogm: 'DJI D-Log M', bmdgen4: 'Blackmagic Film Gen 4', slog2: 'Sony S-Log2 (use S-Log3)'
+  };
+  // The curve to use at one ISO. Per-EI curves (LogC3) need an EI in their table.
+  function curveAt(key, iso) {
+    const C = CURVES[key];
+    if (!C || !C.perEI) return C;
+    if (!C.eis.includes(iso)) throw new Error(`${C.name}: no published curve for EI ${iso}`);
+    return Object.assign({}, C, C.at(iso));
+  }
 
   // ---- Range helpers (10-bit code values) ----
   const fullToLegalCV = cv => 64 + cv * 876 / 1023;
@@ -77,6 +178,12 @@
     if (!noFloor && p.dr1 < p.dr2) e.push('Range at SNR 1 must be at least the range at SNR 2.');
     if (!Array.isArray(p.isoList) || !p.isoList.length || p.isoList.some(i => !(i >= 25 && i <= 409600))) e.push('ISO list must contain at least one valid ISO.');
     if (p.isoMode != null && !ISO_MODES[p.isoMode]) e.push('Unknown ISO behavior.');
+    const PC = CURVES[p.curve];
+    if (PC.perEI) {
+      const bad = [p.baseISO].concat(p.isoList || []).filter(i => !PC.eis.includes(i));
+      if (bad.length) e.push(`${PC.name} has a published curve only for EI ${PC.eis.join(', ')}. Not available: ${[...new Set(bad)].join(', ')}.`);
+      if (isoModeOf(p) !== 'clip') e.push(`${PC.name} bakes the EI into the curve: gray stays at 400 and clip moves. Set ISO behavior to "Clip moves with ISO, metered gray stays".`);
+    }
     if (![17, 33, 65].includes(p.lutSize)) e.push('LUT size must be 17, 33 or 65.');
     return e;
   }
@@ -86,15 +193,16 @@
 
   // ---- Zone model for one ISO ----
   function buildModel(p, iso) {
-    const C = CURVES[p.curve];
+    const C = curveAt(p.curve, iso);
     // ISO behavior: 'clip' = clip and floor move with ISO, metered gray stays (Nikon ZR, RED-style ISO).
     // 'gray' = signal stays at base, metered gray moves with EI (Sony Cine EI). 'none' = no shift.
     const mode = isoModeOf(p);
     const shift = mode === 'none' ? 0 : log2(iso / p.baseISO);
     const k = Math.pow(2, shift), kc = mode === 'clip' ? k : 1;
-    const baseClipLin = C.lin(p.clipCV / 1023);
+    const Cb = curveAt(p.curve, p.baseISO); // measured values were read on the base-ISO curve
+    const baseClipLin = Cb.lin(p.clipCV / 1023);
     const clipLin = baseClipLin * kc;
-    const greyLin = C.lin(p.greyCV / 1023) / (mode === 'gray' ? k : 1);
+    const greyLin = Cb.lin(p.greyCV / 1023) / (mode === 'gray' ? k : 1);
     // No noise data: no shadow colors at all; the picture shows in gray all the way down.
     const noFloor = p.floorKnown === false;
     const floor2Lin = noFloor ? -Infinity : baseClipLin / Math.pow(2, p.dr2) * kc;
@@ -242,10 +350,11 @@
   // ---- Report ----
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function makeReport(p, models, opts) {
-    const C = CURVES[p.curve], f1 = v => v.toFixed(1), f0 = v => Math.round(v);
+    const C = CURVES[p.curve]; // name only; per-ISO math uses m.curve
+    const f1 = v => v.toFixed(1), f0 = v => Math.round(v);
     const rows = models.map(m => {
       const t = clipThreshold(m, p.lutSize, opts.conservativeClip) * 1023;
-      const early = Math.log2(m.clipLin / C.lin(t / 1023));
+      const early = Math.log2(m.clipLin / m.curve.lin(t / 1023));
       const u = v => isFinite(v) ? f1(v) : 'not measured';
       return `<tr><td>${m.iso}</td><td>${m.clipOutOfRange ? 'above 1023' : f0(m.clipCV)}</td><td>${f0(m.greyCV)}</td><td>+${f1(m.over)}</td><td>${u(m.under2)}</td><td>${u(m.under1)}</td><td>${f0(t)} (${early.toFixed(2)} stop early)</td></tr>`;
     }).join('');
@@ -316,5 +425,5 @@ ${p.credit ? `<p>Dynamic range measurements from the <a href="${esc(p.credit.url
     return { folder, files, models, zip: makeZip(files) };
   }
 
-  return { exportOmni, exportLUTs, omniName, ISO_MODES, CURVES, PALETTE, validate, buildModel, clipThreshold, classify, makeCube, makeTfc4, makeReport, makeZip, crc32, exportAll, fileBase, fullToLegalCV, legalToFullCV };
+  return { curveAt, UNPUBLISHED_CURVES, exportOmni, exportLUTs, omniName, ISO_MODES, CURVES, PALETTE, validate, buildModel, clipThreshold, classify, makeCube, makeTfc4, makeReport, makeZip, crc32, exportAll, fileBase, fullToLegalCV, legalToFullCV };
 });
