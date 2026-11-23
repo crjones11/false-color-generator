@@ -315,7 +315,9 @@ $('modelSel').addEventListener('input', () => {
   noteModel(); if(other) $('model').focus();
 });
 function clearMeasurements(){
-  ['clipMax','clipCV','greyCV','dr2','dr1'].forEach(id => $(id).value='');
+  ['clipMax','clipCV','greyCV','dr2','dr1','baseISO','isoList'].forEach(id => $(id).value='');
+  // start a fresh entry: Imatest fields showing, full-range readings (a loaded camera may have left these switched)
+  $('noFloor').checked=false; $('clipManual').checked=false; $('clipOf').value='65535'; $('clipRange').value='full'; $('greyRange').value='full';
   const C=FCG.CURVES[$('curve').value];
   $('greyCV').placeholder = C ? `Published 18%: ${Math.round(C.enc(0.18)*1023)}. Meter it.` : '';
 }
