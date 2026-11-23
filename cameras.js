@@ -107,11 +107,11 @@ var FCG_CAMERAS = [
     credit: { org: 'CineD', tester: 'Gunther Machu (with Florian Milz)', title: 'Sony VENICE 2 Lab Test', date: '2022-06-04', url: 'https://www.cined.com/sony-venice-2-lab-test-rolling-shutter-dynamic-range-and-latitude/' },
     circuits: [
       { name: 'Base ISO 800', baseISO: 800, isos: [800], isoMode: 'none',
-        clipMax: 57920, clipOf: 65535, dr2: 11.7, dr1: 12.9, grayCV: 420, grayNominal: true,
-        sources: { range: 'CineD Imatest sheet, 8.6K X-OCN XT ISO 800 (dated 2022-06-04). The 4K ProRes HQ sheet is a separate mode (13.2 / 14.2, not included).', gray: 'Not metered yet. Sony S-Log3 published 18% gray (code 420) used until a metered gray card is added.', iso: 'Records at base ISO (Cine EI): one preset per base. EI moves only the monitoring LUT.' } },
+        clipCV: 887, dr2: 11.7, dr1: 12.9, grayCV: 420, grayNominal: true,
+        sources: { range: 'Clip: CineD\'s Xyla luma waveform, top patch at about 887 (Imatest max=57920, 904, is the brightest single channel). The 4K ProRes HQ waveform also tops out at about 888 once its levels are read correctly. Range: CineD Imatest sheet, 8.6K X-OCN XT ISO 800 (dated 2022-06-04). The 4K ProRes HQ sheet is a separate mode (13.2 / 14.2, not included).', gray: 'Not metered yet. Sony S-Log3 published 18% gray (code 420) used until a metered gray card is added.', iso: 'Records at base ISO (Cine EI): one preset per base. EI moves only the monitoring LUT.' } },
       { name: 'Base ISO 3200', baseISO: 3200, isos: [3200], isoMode: 'none',
-        clipMax: 57536, clipOf: 65535, dr2: 11.1, dr1: 12.9, grayCV: 420, grayNominal: true,
-        sources: { range: 'CineD Imatest sheet, 8.6K X-OCN XT ISO 3200 (dated 2022-06-04).', gray: 'Not metered yet. Sony S-Log3 published 18% gray (code 420) used until a metered gray card is added.', iso: 'Records at base ISO (Cine EI): one preset per base. EI moves only the monitoring LUT.' } }
+        clipCV: 887, dr2: 11.1, dr1: 12.9, grayCV: 420, grayNominal: true,
+        sources: { range: 'Clip: CineD\'s Xyla luma waveform, top patch at about 887 (Imatest max=57536, 898, is the brightest single channel). Range: CineD Imatest sheet, 8.6K X-OCN XT ISO 3200 (dated 2022-06-04).', gray: 'Not metered yet. Sony S-Log3 published 18% gray (code 420) used until a metered gray card is added.', iso: 'Records at base ISO (Cine EI): one preset per base. EI moves only the monitoring LUT.' } }
     ]
   },
   {
