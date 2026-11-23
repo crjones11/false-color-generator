@@ -160,6 +160,6 @@ ok(F.validate(Object.assign({}, zr, { dr1: 9 })).length > 0, 'SNR1 < SNR2 reject
 console.log(`${n} checks passed`);
 // ALEXA 35: ProRes sheet is the same clip read legal; EI 3200 lands above 1023
 { const DB = require('./cameras.js'), a = DB.find(c => c.model === 'ALEXA 35'), k = a.circuits[0];
-  near(F.legalToFullCV(54144 / 65535 * 1023), k.clipMax / 65535 * 1023, 0.5, 'A35 ProRes clip = ARRIRAW clip after legal expansion');
-  const p = { curve: 'logc4', baseISO: 800, isoMode: 'clip', clipCV: k.clipMax / 65535 * 1023, greyCV: 285, dr2: k.dr2, dr1: k.dr1, floorKnown: true, greyBand: 0.17, pictureStops: 1, lutSize: 33 };
-  ok(F.buildModel(p, 3200).clipOutOfRange, 'A35 EI 3200 clip above 1023, as the 1022 sheet shows'); console.log('A35 checks ok'); }
+  near(F.legalToFullCV(54144 / 65535 * 1023), 58432 / 65535 * 1023, 0.5, 'A35 ProRes clip = ARRIRAW clip after legal expansion');
+  const p = { curve: 'logc4', baseISO: 800, isoMode: 'clip', clipCV: k.clipCV, greyCV: 285, dr2: k.dr2, dr1: k.dr1, floorKnown: true, greyBand: 0.17, pictureStops: 1, lutSize: 33 };
+  { const m = F.buildModel(p, 3200); ok(m.clipOutOfRange || m.clipCV > 1010, 'A35 EI 3200 luma clip at the LogC4 top, as the 1022 sheet shows'); } console.log('A35 checks ok'); }

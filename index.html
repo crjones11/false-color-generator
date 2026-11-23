@@ -664,8 +664,8 @@ var FCG_CAMERAS = [
     credit: { org: 'CineD', tester: 'Gunther Machu (with Florian Milz)', title: 'ARRI ALEXA 35 Lab Test', date: '2022-08-17', url: 'https://www.cined.com/arri-alexa-35-lab-test-rolling-shutter-dynamic-range-and-latitude-plus-video/' },
     circuits: [
       { name: 'EI 800 (single base)', baseISO: 800, isos: [400, 800, 1600, 3200], isoMode: 'clip',
-        clipMax: 58432, clipOf: 65535, dr2: 15.1, dr1: 16.3, grayCV: 285, grayNominal: true,
-        sources: { range: 'CineD lab test, Imatest sheet, EI 800 ARRIRAW. The EI 800 ProRes 4444 XQ sheet agrees: max=54144 is the same clip read as legal range (845 legal = 912 full), DR 15.3 / 16.1.',
+        clipCV: 884, dr2: 15.1, dr1: 16.3, grayCV: 285, grayNominal: true,
+        sources: { range: 'Clip: CineD\'s Xyla luma waveform, top patch at about 884 (Imatest max=58432, 912, is the brightest single channel). Range: CineD lab test, Imatest sheet, EI 800 ARRIRAW. The EI 800 ProRes 4444 XQ sheet agrees: max=54144 is the same clip read as legal range (845 legal = 912 full), DR 15.3 / 16.1.',
           gray: 'Not metered yet. ARRI LogC4 published 18% gray (0.2784, code 285) used until a metered gray card is added.',
           iso: 'EI is baked into LogC4: gray stays, clip moves with EI. The EI 3200 ARRIRAW sheet tops out at 1022, the LogC4 ceiling, as predicted (clip lands above 1023 at EI 3200).' } }
     ]
@@ -693,8 +693,8 @@ var FCG_CAMERAS = [
     credit: { org: 'CineD', tester: 'Gunther Machu (with Florian Milz)', title: 'ARRI Alexa Classic & Mini LF Lab Test', date: '2021-04-18', url: 'https://www.cined.com/arri-alexa-classic-mini-lf-lab-test-rolling-shutter-dynamic-range-and-latitude/' },
     circuits: [
       { name: 'EI 800', baseISO: 800, isos: [400, 800, 1600], isoMode: 'clip',
-        clipMax: 64768, clipOf: 65535, dr2: 13.4, dr1: 14.5, grayCV: 400, grayNominal: true,
-        sources: { range: 'CineD Imatest sheet, ARRIRAW EI 800 (sheet titled "Alexa LF", dated 2021-04-18). The ProRes 4444 XQ sheet reads close (max=63744, DR 13.5 / 14.7).', gray: 'Not metered yet. ARRI LogC3 published 18% gray (code 400) used until a metered gray card is added.', iso: 'EI is baked into the log curve: gray stays, clip moves with EI. ARRI publishes LogC3 for EI 160 to 1600 only.' } }
+        clipCV: 965, dr2: 13.4, dr1: 14.5, grayCV: 400, grayNominal: true,
+        sources: { range: 'Clip: CineD\'s Xyla luma waveform, top patch at about 965 (Imatest max=64768, 1011, is the brightest single channel). Range: CineD Imatest sheet, ARRIRAW EI 800 (sheet titled "Alexa LF", dated 2021-04-18). The ProRes 4444 XQ sheet reads close (max=63744, DR 13.5 / 14.7).', gray: 'Not metered yet. ARRI LogC3 published 18% gray (code 400) used until a metered gray card is added.', iso: 'EI is baked into the log curve: gray stays, clip moves with EI. ARRI publishes LogC3 for EI 160 to 1600 only.' } }
     ]
   },
   {
@@ -703,7 +703,7 @@ var FCG_CAMERAS = [
     circuits: [
       { name: 'ISO 800', baseISO: 800, isos: [800, 1280, 1600, 2000, 3200], isoMode: 'clip',
         clipCV: 841, dr2: 13.4, dr1: 14.9, grayCV: 341.3, grayNominal: true,
-        sources: { range: 'Clip: CineD\'s Xyla waveform, top patch at about 841 (Imatest max=54656, 853, reads a little high). Range: CineD Imatest sheet, 8K R3D HQ ISO 800 (dated 2022-10-15).', gray: 'Not metered yet. RED Log3G10 published 18% gray (1/3, code 341) used until a metered gray card is added. (The Nikon ZR metered a full stop higher than this.)', iso: 'ISO 1280, 1600 and 2000 presets added at the author\'s request. R3D ISO is set in the decode: gray stays, clip moves with ISO. CineD notes the V-RAPTOR has no defined native ISO.' } }
+        sources: { range: 'Clip: CineD\'s Xyla waveform, top patch at about 841 (Imatest max=54656, 853, is the brightest single channel). Range: CineD Imatest sheet, 8K R3D HQ ISO 800 (dated 2022-10-15).', gray: 'Not metered yet. RED Log3G10 published 18% gray (1/3, code 341) used until a metered gray card is added. (The Nikon ZR metered a full stop higher than this.)', iso: 'ISO 1280, 1600 and 2000 presets added at the author\'s request. R3D ISO is set in the decode: gray stays, clip moves with ISO. CineD notes the V-RAPTOR has no defined native ISO.' } }
     ]
   },
   {
@@ -721,7 +721,7 @@ var FCG_CAMERAS = [
     circuits: [
       { name: 'ISO 800', baseISO: 800, isos: [400, 800, 1600], isoMode: 'clip',
         clipMax: 51456, clipOf: 65535, dr2: 13, dr1: 14.5, grayCV: 392.4, grayNominal: true,
-        sources: { range: 'CineD Imatest sheet, 12K 3:2 BRAW ISO 800 (dated 2024-11-07). Other sensor modes differ: 9K 13.1 / 14.6, 8K 12.6 / 14.2 (clip 47488), 4K 13.2 / 14.6 (clip 47488), 12K to 4K in Resolve 13.6 / 14.8.', gray: 'Not metered yet. Blackmagic Film Gen 5 published 18% gray (0.3836, code 392) used until a metered gray card is added.', iso: 'BRAW ISO is set in the decode: gray stays, clip moves with ISO.' } }
+        sources: { range: 'Clip confirmed on CineD\'s Xyla waveform: top patch at 803, same as Imatest max=51456. Range: CineD Imatest sheet, 12K 3:2 BRAW ISO 800 (dated 2024-11-07). Other sensor modes differ: 9K 13.1 / 14.6, 8K 12.6 / 14.2 (clip 47488), 4K 13.2 / 14.6 (clip 47488), 12K to 4K in Resolve 13.6 / 14.8.', gray: 'Not metered yet. Blackmagic Film Gen 5 published 18% gray (0.3836, code 392) used until a metered gray card is added.', iso: 'BRAW ISO is set in the decode: gray stays, clip moves with ISO.' } }
     ]
   },
   {
@@ -763,10 +763,10 @@ var FCG_CAMERAS = [
     circuits: [
       { name: 'Base ISO 800 (dual gain ON)', baseISO: 800, isos: [800], isoMode: 'none',
         clipCV: 890, dr2: 13.4, dr1: 14.4, grayCV: 420, grayNominal: true,
-        sources: { range: 'Clip: CineD\'s Xyla waveform, top patch at about 890 (Imatest max=58688, 916, reads high). Range: CineD Imatest sheet, 5K X-OCN LT ISO 800, DG ON (dated 2026-08-25). DG OFF at ISO 800 drops to 10.7 / 12.0. XAVC 4K DG ON reads 14.0 / 14.4.', gray: 'Not metered yet. Sony S-Log3 published 18% gray (code 420) used until a metered gray card is added.', iso: 'Records at base ISO (Cine EI): one preset per base. EI moves only the monitoring LUT.' } },
+        sources: { range: 'Clip: CineD\'s Xyla waveform, top patch at about 890 (Imatest max=58688, 916, is the brightest single channel). Range: CineD Imatest sheet, 5K X-OCN LT ISO 800, DG ON (dated 2026-08-25). DG OFF at ISO 800 drops to 10.7 / 12.0. XAVC 4K DG ON reads 14.0 / 14.4.', gray: 'Not metered yet. Sony S-Log3 published 18% gray (code 420) used until a metered gray card is added.', iso: 'Records at base ISO (Cine EI): one preset per base. EI moves only the monitoring LUT.' } },
       { name: 'Base ISO 4000 (dual gain OFF)', baseISO: 4000, isos: [4000], isoMode: 'none',
         clipCV: 890, dr2: 10.1, dr1: 11.6, grayCV: 420, grayNominal: true,
-        sources: { range: 'Clip: CineD\'s Xyla waveform, top patch at about 890 at ISO 800, 4000 and 12800 (Imatest max=58560, 915, reads high). Range: CineD Imatest sheet, 5K X-OCN LT ISO 4000, DG OFF (dated 2026-08-25). ISO 12800 reads 9.1 / 11.2.', gray: 'Not metered yet. Sony S-Log3 published 18% gray (code 420) used until a metered gray card is added.', iso: 'Records at base ISO (Cine EI): one preset per base. EI moves only the monitoring LUT.' } }
+        sources: { range: 'Clip: CineD\'s Xyla waveform, top patch at about 890 at ISO 800, 4000 and 12800 (Imatest max=58560, 915, is the brightest single channel). Range: CineD Imatest sheet, 5K X-OCN LT ISO 4000, DG OFF (dated 2026-08-25). ISO 12800 reads 9.1 / 11.2.', gray: 'Not metered yet. Sony S-Log3 published 18% gray (code 420) used until a metered gray card is added.', iso: 'Records at base ISO (Cine EI): one preset per base. EI moves only the monitoring LUT.' } }
     ]
   },
   {
@@ -775,7 +775,7 @@ var FCG_CAMERAS = [
     circuits: [
       { name: 'Base ISO 800', baseISO: 800, isos: [800], isoMode: 'none',
         clipCV: 892, dr2: 12.4, dr1: 13.5, grayCV: 420, grayNominal: true,
-        sources: { range: "Range: CineD Imatest sheet, FF 4K XAVC ISO 800 (dated 2025-08-29). Clip: read from CineD's Xyla waveform (top patch at about 892). Imatest max=60992 (952) reads high here, likely edge overshoot from in-camera sharpening. Super 35 mode is a separate mode (11.6 / 12.7).", gray: 'Not metered yet. Sony S-Log3 published 18% gray (code 420) used until a metered gray card is added.', iso: 'Records at base ISO (Cine EI): one preset per base. EI moves only the monitoring LUT.' } },
+        sources: { range: "Range: CineD Imatest sheet, FF 4K XAVC ISO 800 (dated 2025-08-29). Clip: read from CineD's Xyla waveform (top patch at about 892). Imatest max=60992 (952) is the brightest single channel and reads higher than luma. Super 35 mode is a separate mode (11.6 / 12.7).", gray: 'Not metered yet. Sony S-Log3 published 18% gray (code 420) used until a metered gray card is added.', iso: 'Records at base ISO (Cine EI): one preset per base. EI moves only the monitoring LUT.' } },
       { name: 'Base ISO 4000', baseISO: 4000, isos: [4000], isoMode: 'none',
         clipCV: 892, dr2: 12.1, dr1: 13.2, grayCV: 420, grayNominal: true,
         sources: { range: "Range: CineD Imatest sheet, FF 4K XAVC ISO 4000 (dated 2025-08-29). Clip: CineD's Xyla waveform shows the same top patch at about 892.", gray: 'Not metered yet. Sony S-Log3 published 18% gray (code 420) used until a metered gray card is added.', iso: 'Records at base ISO (Cine EI): one preset per base. EI moves only the monitoring LUT.' } }
