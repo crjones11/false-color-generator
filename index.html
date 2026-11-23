@@ -30,6 +30,9 @@ button.primary{background:var(--accent);border-color:var(--accent);color:#fff;fo
 button.primary:disabled{opacity:.45;cursor:not-allowed}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
 .badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:10px;margin-left:6px}
+.tier{border-radius:6px;padding:7px 10px;font-size:12px;margin:-2px 0 10px;border:1px solid var(--line)}
+.tier.full{background:#123322;border-color:#1f5a3a;color:#9be3b8}.tier.part{background:#16283d;border-color:#28496e;color:#a9c8ee}.tier.none{background:#2a2a2a;color:#cfcfcf}
+.tier button{margin-left:6px;padding:3px 9px;font-size:12px;width:auto}
 .badge.ok{background:#173d27;color:#7be0a1}.badge.warn{background:#44340f;color:#f1c66b}
 #errors{color:#ff9a9d;font-size:13px;margin:0;padding-left:18px}
 #errors:empty{display:none}
@@ -134,6 +137,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
       <div><label for="makeSel">Make</label><select id="makeSel"></select><input id="make" autocomplete="off" placeholder="Type the make" hidden></div>
       <div><label for="modelSel">Model</label><select id="modelSel"></select><input id="model" autocomplete="off" placeholder="Type the model" hidden></div>
     </div>
+    <div class="tier" id="modelStatus" hidden><span id="modelStatusText"></span> <button type="button" id="loadMeasured" hidden>Load measured data</button></div>
     <div class="warnbox" id="modelNote"></div>
     <div class="row one"><div><label for="curve">Log curve <span id="curveBadge"></span></label><select id="curve"></select></div></div>
     <div class="row one"><div><label for="baseISO">Base ISO of this circuit</label><input id="baseISO" inputmode="numeric"></div></div>
@@ -732,11 +736,39 @@ const catModel = (mk, mo) => { const m=catMake(mk); return m && m.models.find(x 
 $('makeSel').appendChild(opt('', 'Pick a make'));
 CAT.forEach(m => $('makeSel').appendChild(opt(m.make, m.make)));
 $('makeSel').appendChild(opt(OTHER, 'Other (type it)'));
+// Which catalog models have measured data in the database: 'full' (clip, gray and noise floor), 'part' (clip and gray), or 'none' (curve only).
+const sameName = (a,b) => String(a||'').trim().toLowerCase() === String(b||'').trim().toLowerCase();
+const dbFor = (mk, mo) => DB.map((c,i)=>[c,i]).filter(([c]) => sameName(c.make,mk) && sameName(c.model,mo));
+function tierOf(mk, mo){
+  const hits = dbFor(mk, mo); if(!hits.length) return 'none';
+  return hits.some(([c]) => c.circuits.some(k => k.dr2 != null)) ? 'full' : 'part';
+}
+const TIER_LABEL = { full: 'Measured: clip, gray and noise floor', part: 'Measured: clip and gray (no noise data)', none: 'Curve only: needs your test data' };
 function fillModels(mk){
   const sel=$('modelSel'), m=catMake(mk); sel.textContent='';
   sel.appendChild(opt('', m ? 'Pick a model' : (mk ? 'Type the model below' : 'Pick a make first')));
-  if(m) m.models.forEach(x => sel.appendChild(opt(x[0], x[0])));
+  if(m){
+    for (const t of ['full','part','none']) {
+      const list = m.models.filter(x => tierOf(m.make, x[0]) === t); if(!list.length) continue;
+      const g=document.createElement('optgroup'); g.label = t==='full' ? 'Measured (clip, gray, noise floor)' : t==='part' ? 'Measured (clip and gray)' : 'Curve only (needs test data)';
+      list.forEach(x => g.appendChild(opt(x[0], x[0] + (t==='full' ? '  ●' : t==='part' ? '  ◐' : ''))));
+      sel.appendChild(g);
+    }
+  }
   sel.appendChild(opt(OTHER, 'Other (type it)'));
+}
+function showTier(){
+  const mk=$('make').value, mo=$('model').value, box=$('modelStatus');
+  if(!catModel(mk, mo) && !dbFor(mk, mo).length){ box.hidden=true; return; }
+  const t=tierOf(mk, mo), hits=dbFor(mk, mo), ci=$('camSel').value;
+  box.hidden=false; box.className='tier '+t;
+  $('modelStatusText').textContent = t==='none'
+    ? TIER_LABEL.none + ': clip (CineD Imatest "max=" or a clipped frame), metered 18% gray, and the Imatest dynamic range rows for shadow zones.'
+    : TIER_LABEL[t] + (hits.some(([c,i]) => String(i)===ci) ? ' (loaded).' : '.')
+      + (hits.some(([c]) => c.curve===$('curve').value) ? '' : ` That data is for ${[...new Set(hits.map(([c])=>c.mode))].join(', ')}. ${FCG.CURVES[$('curve').value]?FCG.CURVES[$('curve').value].name:'This curve'} on this camera is curve only.`);
+  const showLoad = t!=='none' && !hits.some(([c,i]) => String(i)===ci);
+  $('loadMeasured').hidden = !showLoad;
+  $('loadMeasured').onclick = () => selectCamera(hits[0][1], 0);
 }
 // Curve list: this model's curves first, then every other verified curve. Unpublished curves show but can't be picked.
 function fillCurves(entry){
@@ -783,8 +815,14 @@ $('modelSel').addEventListener('input', () => {
   const mine = fillCurves(catModel($('make').value, v));
   if(mine.length && !mine.includes($('curve').value)) $('curve').value = mine[0];
   if(FCG.CURVES[$('curve').value] && FCG.CURVES[$('curve').value].perEI) $('isoMode').value='clip';
+  if(!other && v && tierOf($('make').value, v)==='none') clearMeasurements();
   noteModel(); if(other) $('model').focus();
 });
+function clearMeasurements(){
+  ['clipMax','clipCV','greyCV','dr2','dr1'].forEach(id => $(id).value='');
+  const C=FCG.CURVES[$('curve').value];
+  $('greyCV').placeholder = C ? `Published 18%: ${Math.round(C.enc(0.18)*1023)}. Meter it.` : '';
+}
 fillModels(''); fillCurves(null);
 DB.forEach((c,i)=>{ const o=document.createElement('option'); o.value=String(i); o.textContent=`${c.make} ${c.model} (${c.mode})`; $('camSel').appendChild(o); });
 { const o=document.createElement('option'); o.value='custom'; o.textContent='Custom camera'; $('camSel').appendChild(o); }
@@ -842,6 +880,7 @@ function update(){
   $('drRow').hidden = $('noFloor').checked;
   $('manualClip').hidden = !$('clipManual').checked; $('clipMax').disabled = $('clipOf').disabled = $('clipManual').checked;
   const p = readForm(), errs = FCG.validate(p), c = FCG.CURVES[p.curve], ci=$('camSel').value;
+  showTier();
   { const e=catModel(p.make, p.model); noteModel();
     if(e && !e[1].some(k=>FCG.CURVES[k])) errs.push(`The ${p.model} records only curves with no published formula, so it can't be built yet.`);
     else if(e && !e[1].includes(p.curve)) $('modelNote').textContent = (($('modelNote').textContent||'') + ` ${c?c.name:'This curve'} isn't on this camera's known list. Fine if its firmware added it; otherwise pick one of the curves at the top.`).trim(); }
