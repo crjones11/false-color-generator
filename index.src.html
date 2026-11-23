@@ -260,7 +260,8 @@ function showTier(){
   box.hidden=false; box.className='tier '+t;
   $('modelStatusText').textContent = t==='none'
     ? TIER_LABEL.none + ': clip (CineD Imatest "max=" or a clipped frame), metered 18% gray, and the Imatest dynamic range rows for shadow zones.'
-    : TIER_LABEL[t] + (hits.some(([c,i]) => String(i)===ci) ? ' (loaded).' : '.')
+    : (hits.some(([c]) => c.circuits.some(k => k.grayNominal)) ? TIER_LABEL[t].replace('clip, gray and noise floor','clip and noise floor').replace('clip and gray','clip') + '. Gray is the published value until metered' : TIER_LABEL[t])
+      + (hits.some(([c,i]) => String(i)===ci) ? ' (loaded).' : '.')
       + (hits.some(([c]) => c.curve===$('curve').value) ? '' : ` That data is for ${[...new Set(hits.map(([c])=>c.mode))].join(', ')}. ${FCG.CURVES[$('curve').value]?FCG.CURVES[$('curve').value].name:'This curve'} on this camera is curve only.`);
   const showLoad = t!=='none' && !hits.some(([c,i]) => String(i)===ci);
   $('loadMeasured').hidden = !showLoad;

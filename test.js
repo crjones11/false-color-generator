@@ -142,7 +142,7 @@ ok(F.validate(Object.assign({}, zr, { dr1: 9 })).length > 0, 'SNR1 < SNR2 reject
   for (const cam of DB) for (const k of cam.circuits) {
     const p = { make: cam.make, model: cam.model, curve: cam.curve, baseISO: k.baseISO, isoList: k.isos, isoMode: k.isoMode, clipCV: k.clipMax ? k.clipMax / k.clipOf * 1023 : k.clipCV, greyCV: k.grayCV, dr2: k.dr2, dr1: k.dr1, floorKnown: k.dr2 != null, greyBand: 0.17, pictureStops: 1, lutSize: 33, conservativeClip: true, signal: cam.signal };
     ok(F.validate(p).length === 0, `${cam.model} ${k.name} valid: ${F.validate(p)}`);
-    const m = F.buildModel(p, k.baseISO); ok(m.over > 3 && m.over < 9, `${cam.model} ${k.name} stops over gray ${m.over.toFixed(2)}`);
+    const m = F.buildModel(p, k.baseISO); ok(m.over > 3 && m.over < 12, `${cam.model} ${k.name} stops over gray ${m.over.toFixed(2)}`);
     if (cam.signal) ok(/Measured on/.test(F.makeReport(p, [m], {})), 'report shows signal note');
   }
   const v = DB.find(c => c.model === 'VENICE'); const p = { curve: 'slog3' };
@@ -158,3 +158,8 @@ ok(F.validate(Object.assign({}, zr, { dr1: 9 })).length > 0, 'SNR1 < SNR2 reject
   const l = F.exportLUTs(zrc.circuits.map(k => prof(zrc, k)));
   ok(l.files.filter(f => f.name.endsWith('.cube')).length === 8 && !l.files.some(f => f.name.endsWith('.tfc4')) && l.files.some(f => /profile_Base800\.json/.test(f.name)), 'LUT zip: 8 cubes, no presets'); }
 console.log(`${n} checks passed`);
+// ALEXA 35: ProRes sheet is the same clip read legal; EI 3200 lands above 1023
+{ const DB = require('./cameras.js'), a = DB.find(c => c.model === 'ALEXA 35'), k = a.circuits[0];
+  near(F.legalToFullCV(54144 / 65535 * 1023), k.clipMax / 65535 * 1023, 0.5, 'A35 ProRes clip = ARRIRAW clip after legal expansion');
+  const p = { curve: 'logc4', baseISO: 800, isoMode: 'clip', clipCV: k.clipMax / 65535 * 1023, greyCV: 285, dr2: k.dr2, dr1: k.dr1, floorKnown: true, greyBand: 0.17, pictureStops: 1, lutSize: 33 };
+  ok(F.buildModel(p, 3200).clipOutOfRange, 'A35 EI 3200 clip above 1023, as the 1022 sheet shows'); console.log('A35 checks ok'); }

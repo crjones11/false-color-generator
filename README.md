@@ -30,7 +30,7 @@ Each LUT is valid for one ISO only. Using a higher-ISO LUT at a lower ISO settin
 
 - Every log curve in the app matches its maker's published document (gray, and black/white where printed) and the open-source colour-science library to within 0.0001 code value: RED Log3G10, ARRI LogC3 (per EI, 160 to 1600), ARRI LogC4, Sony S-Log3, Canon Log 2 and 3, Panasonic V-Log, Fujifilm F-Log and F-Log2, Nikon N-Log, DJI D-Log, Kinefinity KineLOG3 and Blackmagic Film Gen 5.
 - No published formula, so not supported yet: Z CAM Z-Log2, DJI D-Log M, Blackmagic Film Gen 4.
-- Measured cameras: Nikon ZR (R3D NE, CineD data plus metered gray) and Sony VENICE (S-Log3, measured on the legal SDI log output with a null LUT loaded; those LUTs are only for that setup).
+- Measured cameras: Nikon ZR (R3D NE, CineD data plus metered gray), ARRI ALEXA 35 (LogC4, CineD data; gray is ARRI's published value until metered) and Sony VENICE (S-Log3, measured on the legal SDI log output with a null LUT loaded; those LUTs are only for that setup).
 - The Make and Model lists in Camera data cover about 100 cinema and cinema-style bodies, grouped by how much test data exists: measured (clip, gray and noise floor), measured (clip and gray), or curve only. A curve-only camera needs a clip level and a metered gray before it can export.
 - The LUTs have been checked in software against real frames, not yet on a camera or monitor.
 

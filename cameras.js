@@ -17,6 +17,17 @@ var FCG_CAMERAS = [
     ]
   },
   {
+    id: 'arri-alexa35-logc4', make: 'ARRI', model: 'ALEXA 35', mode: 'LogC4 (ARRIRAW or ProRes)', curve: 'logc4',
+    credit: { org: 'CineD', tester: 'Gunther Machu (with Florian Milz)', title: 'ARRI ALEXA 35 Lab Test', date: '2022-08-17', url: 'https://www.cined.com/arri-alexa-35-lab-test-rolling-shutter-dynamic-range-and-latitude-plus-video/' },
+    circuits: [
+      { name: 'EI 800 (single base)', baseISO: 800, isos: [400, 800, 1600, 3200], isoMode: 'clip',
+        clipMax: 58432, clipOf: 65535, dr2: 15.1, dr1: 16.3, grayCV: 285, grayNominal: true,
+        sources: { range: 'CineD lab test, Imatest sheet, EI 800 ARRIRAW. The EI 800 ProRes 4444 XQ sheet agrees: max=54144 is the same clip read as legal range (845 legal = 912 full), DR 15.3 / 16.1.',
+          gray: 'Not metered yet. ARRI LogC4 published 18% gray (0.2784, code 285) used until a metered gray card is added.',
+          iso: 'EI is baked into LogC4: gray stays, clip moves with EI. The EI 3200 ARRIRAW sheet tops out at 1022, the LogC4 ceiling, as predicted (clip lands above 1023 at EI 3200).' } }
+    ]
+  },
+  {
     id: 'sony-venice-slog3-sdi', make: 'Sony', model: 'VENICE', mode: 'S-Log3 SDI out, null LUT (legal)', curve: 'slog3',
     signal: 'Legal-range S-Log3 on the camera SDI output with a null LUT loaded (captured in Livegrade, legal input). Without a LUT the SDI output is full range and does not change with ISO, so these LUTs are only for the null-LUT setup.',
     circuits: [
