@@ -199,6 +199,42 @@
     return JSON.stringify({ mode: '0', opacity: '1', blur: '0', use_custom_range: 'false', custom_min_rgba: { r: '0', g: '0', b: '1', a: '1' }, custom_max_rgba: { r: '1', g: '0.800000012', b: '0.200000003', a: '1' }, custom_min: '40', custom_max: '70', scale_type: '0', ranges }, null, 4);
   }
 
+  // ---- OmniScope export: one preset per distinct zone set, across all bases of a camera ----
+  function omniName(p, m) { return `${clean(p.make)}_${clean(p.model)}_${CURVES[p.curve].short}_` + (isoModeOf(p) === 'none' ? `Base${p.baseISO}_AllEI` : `ISO${m.iso}`) + '_OmniScope.tfc4'; }
+  function omniSets(profiles) {
+    const out = [];
+    for (const p of profiles) {
+      const errs = validate(p); if (errs.length) throw new Error(errs.join(' '));
+      const seen = new Set(), keep = [];
+      for (const iso of p.isoList) {
+        const m = buildModel(p, iso), key = m.zones.map(z => z.kind + Math.round(z.loCV * 100)).join('|');
+        if (seen.has(key)) continue; seen.add(key); keep.push(m);
+      }
+      out.push({ p, models: keep });
+    }
+    return out;
+  }
+  function folderFor(p, tag) { return `${clean(p.make)}_${clean(p.model)}_${CURVES[p.curve].short}_${tag}`; }
+  function reportName(sets, p, folder) { return sets.length > 1 ? `${folder}/report_Base${p.baseISO}.html` : `${folder}/report.html`; }
+  function exportOmni(profiles, opts) {
+    opts = opts || {};
+    const sets = omniSets(profiles), folder = folderFor(sets[0].p, 'OmniScope'), files = [];
+    for (const { p, models } of sets) {
+      for (const m of models) files.push({ name: `${folder}/${omniName(p, m)}`, text: makeTfc4(m) });
+      files.push({ name: reportName(sets, p, folder), text: makeReport(p, models, { date: opts.date, conservativeClip: p.conservativeClip !== false, inputLegal: !!p.inputLegal }) });
+    }
+    return { folder, files, presets: files.filter(f => f.name.endsWith('.tfc4')).length, zip: makeZip(files) };
+  }
+  function exportLUTs(profiles, opts) {
+    const parts = profiles.map(p => exportAll(p, opts)), folder = folderFor(profiles[0], 'LUTs'), files = [];
+    parts.forEach((x, i) => x.files.forEach(f => {
+      const rest = f.name.slice(f.name.indexOf('/') + 1);
+      const name = /^report\.html$|^profile\.json$/.test(rest) && parts.length > 1 ? rest.replace('.', `_Base${profiles[i].baseISO}.`) : rest;
+      files.push({ name: `${folder}/${name}`, text: f.text });
+    }));
+    return { folder, files, zip: makeZip(files) };
+  }
+
   // ---- File naming ----
   const clean = s => String(s || '').trim().replace(/[^A-Za-z0-9.+-]+/g, '_').replace(/^_+|_+$/g, '') || 'Camera';
   function fileBase(p, iso) { return `${clean(p.make)}_${clean(p.model)}_${CURVES[p.curve].short}_ISO${iso}_FalseColor`; }
@@ -275,11 +311,10 @@ ${p.credit ? `<p>Dynamic range measurements from the <a href="${esc(p.credit.url
         })
       });
     }
-    for (const m of models) files.push({ name: `${folder}/${fileBase(p, m.iso)}_OmniScope.tfc4`, text: makeTfc4(m) });
     files.push({ name: `${folder}/report.html`, text: makeReport(p, models, { date: opts.date, conservativeClip: p.conservativeClip !== false, inputLegal: !!p.inputLegal }) });
     files.push({ name: `${folder}/profile.json`, text: JSON.stringify(p, null, 2) });
     return { folder, files, models, zip: makeZip(files) };
   }
 
-  return { ISO_MODES, CURVES, PALETTE, validate, buildModel, clipThreshold, classify, makeCube, makeTfc4, makeReport, makeZip, crc32, exportAll, fileBase, fullToLegalCV, legalToFullCV };
+  return { exportOmni, exportLUTs, omniName, ISO_MODES, CURVES, PALETTE, validate, buildModel, clipThreshold, classify, makeCube, makeTfc4, makeReport, makeZip, crc32, exportAll, fileBase, fullToLegalCV, legalToFullCV };
 });

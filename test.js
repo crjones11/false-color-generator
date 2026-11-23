@@ -84,7 +84,7 @@ ok(same(nodeI(legalClipNode), rgb(P.clip)) && !same(nodeI(legalClipNode - 1), rg
 
 // 6. Export bundle and zip structure
 const ex = F.exportAll(zr, { date: '2026-11-12' });
-ok(ex.files.length === 2 * 2 + 2 + 2, 'file count');
+ok(ex.files.length === 2 * 2 + 2, 'file count');
 const tf = JSON.parse(F.makeTfc4(m800)); ok(tf.ranges[0].pos === '0' && tf.ranges[tf.ranges.length - 1].pos === '100', 'tfc4 ends');
 for (let i = 1; i < tf.ranges.length; i++) ok(parseFloat(tf.ranges[i].pos) > parseFloat(tf.ranges[i - 1].pos), 'tfc4 positions increase');
 near(parseFloat(tf.ranges.find(r => r.rgba.r === '1' && r.rgba.g === '0' && r.rgba.b === '0').pos), 792 / 1023 * 100, 0.001, 'tfc4 clip position');
@@ -132,4 +132,14 @@ ok(F.validate(Object.assign({}, zr, { dr1: 9 })).length > 0, 'SNR1 < SNR2 reject
   }
   const v = DB.find(c => c.model === 'VENICE'); const p = { curve: 'slog3' };
   near(Math.log2(F.CURVES.slog3.lin(887 / 1023) / F.CURVES.slog3.lin(426 / 1023)), 5.94, 0.02, 'Venice 2500: +5.9 over gray'); }
+// OmniScope export across bases, one preset per distinct zone set
+{ const DB = require('./cameras.js'), prof = (cam, k) => ({ make: cam.make, model: cam.model, curve: cam.curve, baseISO: k.baseISO, isoList: k.isos, isoMode: k.isoMode, clipCV: k.clipMax ? k.clipMax / k.clipOf * 1023 : k.clipCV, greyCV: k.grayCV, dr2: k.dr2, dr1: k.dr1, floorKnown: k.dr2 != null, greyBand: 0.17, pictureStops: 1, lutSize: 33, conservativeClip: true });
+  const zrc = DB.find(c => c.model === 'ZR'), ven = DB.find(c => c.model === 'VENICE');
+  const a = F.exportOmni(zrc.circuits.map(k => prof(zrc, k)));
+  ok(a.presets === 4 && a.files.some(f => /ISO1600_OmniScope/.test(f.name)) && a.files.some(f => /report_Base6400\.html/.test(f.name)), 'ZR: 4 presets, report per base');
+  const v = F.exportOmni(ven.circuits.map(k => Object.assign(prof(ven, k), { isoList: [k.baseISO, k.baseISO * 2] })));
+  ok(v.presets === 2 && v.files.some(f => /Base2500_AllEI_OmniScope/.test(f.name)), 'Venice: one preset per base even with extra EIs listed');
+  ok(!v.files.some(f => f.name.endsWith('.cube')), 'OmniScope zip has no LUTs');
+  const l = F.exportLUTs(zrc.circuits.map(k => prof(zrc, k)));
+  ok(l.files.filter(f => f.name.endsWith('.cube')).length === 8 && !l.files.some(f => f.name.endsWith('.tfc4')) && l.files.some(f => /profile_Base800\.json/.test(f.name)), 'LUT zip: 8 cubes, no presets'); }
 console.log(`${n} checks passed`);

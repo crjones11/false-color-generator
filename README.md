@@ -7,16 +7,12 @@ It runs entirely in the browser. Nothing is uploaded.
 ## Using it
 
 1. Open `index.html` (or the hosted page).
-2. Pick a camera system and its native ISO circuit.
-3. Check the ISOs to export and press **Export LUT set**.
+2. Pick a camera system. The preview's Base buttons switch between its native ISOs.
+3. Press **Download OmniScope presets**.
 
-The zip contains, for each ISO:
+You get a Nobe OmniScope false color preset (`.tfc4`) for every ISO that changes the zones, across all of the camera's bases, plus a report per base. A base where ISO or EI doesn't change the zones (for example the Sony VENICE on its SDI log output) gets one preset labeled `AllEI`.
 
-- `..._Full_33.cube` for in-camera LUT slots and devices that scale their own output
-- `..._Legal_33.cube` with output colors scaled to 64-940, for devices that write LUT output straight to SDI
-- `..._OmniScope.tfc4`, a Nobe OmniScope false color preset
-
-plus `report.html` (headroom by ISO, zone legend, range check procedure) and `profile.json`.
+**Download LUT set** is the secondary output: Full and Legal `.cube` LUTs per ISO with the same zones. Full is for in-camera LUT slots and devices that scale their own output; Legal has the output colors scaled to 64-940, for devices that write LUT output straight to SDI. In a 33-point LUT the clip color starts at the grid point at or below clip, so it can warn slightly early; the OmniScope presets place every edge exactly.
 
 ### OmniScope setup
 

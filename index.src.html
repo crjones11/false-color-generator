@@ -83,13 +83,15 @@ footer a{color:#b9c2d6}
 main>div{min-width:0}select{min-width:0;text-overflow:ellipsis}.row>div{min-width:0}
 #headroom{display:block;overflow-x:auto;white-space:nowrap}
 .nw{white-space:nowrap}.sm{display:none}
+.setup{background:var(--field);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--dim);margin:10px 0 14px;line-height:1.5}.setup b{color:var(--text)}.setup ul{margin:4px 0 6px;padding-left:18px}
+button.second{width:100%;padding:9px 14px;font-weight:600}
 </style>
 </head>
 <body>
 <header>
   <div class="hd"><h1>False Color Generator</h1>
   <a href="https://venmo.com/codyjonescolor" target="_blank" rel="noopener" class="coffee-btn" title="Tip the developer via Venmo">&#9749; <span class="lbl">Buy me a </span>coffee</a></div>
-  <p>Clip-anchored false color LUTs from a camera profile. Warm colors count down to clip, cool colors count up from the noise floor.</p>
+  <p>Clip-anchored false color presets for OmniScope, plus matching LUTs, from measured camera data. Warm colors count down to clip, cool colors count up from the noise floor.</p>
 </header>
 <main>
 <div>
@@ -106,9 +108,14 @@ main>div{min-width:0}select{min-width:0;text-overflow:ellipsis}.row>div{min-widt
 
   <section>
     <ul id="errors"></ul>
-    <button class="primary" id="exportBtn" type="button">Export LUT set (.zip)</button>
+    <button class="primary" id="exportBtn" type="button">Download OmniScope presets</button>
+    <p class="note" id="omniWhat"></p>
+    <div class="setup"><b>OmniScope setup</b> (Common settings)
+      <ul><li>Color Management Input: <b>Raw</b> (Working can stay Rec.709)</li><li>Preserve working display view in analysis: <b>off</b></li><li>Scale the video/SDI range to the full range: <b>on</b></li></ul>
+      OmniScope judges brightness (luma) only, so a saturated highlight can clip one channel before it turns red.</div>
+    <button class="second" id="lutBtn" type="button">Download LUT set (.cube)</button>
+    <p class="note" id="lutWhat"></p>
     <div id="status"></div>
-    <p class="note">Each ISO gets a Full and a Legal LUT. Full is for in-camera slots and devices that scale their own output; Legal has the output colors scaled to 64-940. A report and an OmniScope preset are included.</p>
   </section>
 
   <details class="box">
@@ -282,11 +289,12 @@ function update(){
       '```json',entry,'```'].join('\n');
     $('submitCam').href='https://github.com/crjones11/false-color-generator/issues/new?title='+encodeURIComponent(title)+'&body='+encodeURIComponent(body); }
   const ul=$('errors'); ul.textContent=''; errs.forEach(e=>{const li=document.createElement('li'); li.textContent=e; ul.appendChild(li);});
-  $('exportBtn').disabled = errs.length>0;
+  $('exportBtn').disabled = $('lutBtn').disabled = errs.length>0;
   if (errs.length) { render(null,null); return; }
   try { localStorage.setItem(KEY, JSON.stringify({cam:ci, circ:$('circSel').value, profile:p})); } catch(e){}
   if (!p.isoList.includes(activeISO)) activeISO = p.isoList.includes(p.baseISO) ? p.baseISO : p.isoList[0];
   render(p, p.isoList.map(i=>FCG.buildModel(p,i)));
+  describeExports();
 }
 function el(tag, attrs, text){ const e=document.createElement(tag); if(attrs) for(const k in attrs) e.setAttribute(k,attrs[k]); if(text!=null) e.textContent=text; return e; }
 function render(p, models){
@@ -314,7 +322,7 @@ function render(p, models){
   });
   for(let cv=0; cv<=1023; cv+= (cv===896?127:128)){ const t=el('div',{class:'tick'},String(cv)); t.style.bottom=pct(cv)+'%'; wrap.appendChild(t); }
   const thr = FCG.clipThreshold(m, p.lutSize, p.conservativeClip)*1023;
-  if(p.conservativeClip && thr < Math.min(1023,m.clipCV)-0.5){ const mk=el('div',{class:'mark',title:'Clip color starts here in the LUT'}); mk.style.bottom=pct(thr)+'%'; wrap.appendChild(mk); }
+  if(false){ const mk=el('div',{class:'mark',title:'Clip color starts here in the LUT'}); mk.style.bottom=pct(thr)+'%'; wrap.appendChild(mk); }
   // legend
   const hr=el('tr'); ['','Zone','Code values','Stops from gray'].forEach((h,i)=>hr.appendChild(el('th',i>1?{class:'num'}:null,h))); legend.appendChild(hr);
   const sv = l => { const s=Math.log2(l/m.greyLin); return (s>=0?'+':'')+s.toFixed(1); };
@@ -328,7 +336,6 @@ function render(p, models){
   });
   const warns=[];
   if(m.clipOutOfRange) warns.push('At this ISO the sensor clip lands above code value 1023, so the signal tops out before the clip color can show.');
-  if(p.conservativeClip){ const early=Math.log2(m.clipLin/m.curve.lin(Math.min(1,thr/1023))); if(early>0.01) warns.push(`In the ${p.lutSize}-point LUT the clip color starts at code value ${Math.round(thr)}, about ${early.toFixed(2)} stop early (dashed line).`); }
   $('modelWarn').textContent=warns.join(' ');
   // headroom table
   const nf=models.every(x=>x.noFloor), cols=nf?4:8, hc=i=>i>5?{class:'num fl'}:(i?{class:'num'}:null);
@@ -364,17 +371,33 @@ async function saveFile(filename, u8){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
   return 'started';
 }
-$('exportBtn').addEventListener('click', async ()=>{
+function exportProfiles(){
+  const cur=readForm(), ci=$('camSel').value;
+  if(ci==='custom' || !DB[ci]) return [cur];
+  const opt={greyBand:cur.greyBand, pictureStops:cur.pictureStops, lutSize:cur.lutSize, conservativeClip:cur.conservativeClip, inputLegal:cur.inputLegal, credit:cur.credit, signal:cur.signal};
+  return DB[ci].circuits.map((k,i)=> String(i)===$('circSel').value ? cur : Object.assign(fromDB(+ci,i), opt));
+}
+function describeExports(){
+  try{ const ps=exportProfiles(); if(ps.some(p=>FCG.validate(p).length)) { $('omniWhat').textContent=''; $('lutWhat').textContent=''; return; }
+    const names=[]; ps.forEach(p=>{ const seen=new Set(); p.isoList.forEach(iso=>{ const m=FCG.buildModel(p,iso), key=m.zones.map(z=>z.kind+Math.round(z.loCV*100)).join('|'); if(!seen.has(key)){ seen.add(key); names.push(FCG.ISO_MODES && p.isoMode==='none' ? `base ${p.baseISO} (all EIs)` : `ISO ${iso}`); } }); });
+    $('omniWhat').textContent=`${names.length} preset${names.length>1?'s':''}: ${names.join(', ')}. Report included.`;
+    const n=ps.reduce((s,p)=>s+p.isoList.length,0);
+    $('lutWhat').textContent=`Full and Legal ${ps[0].lutSize}-point LUTs for ${n} ISO${n>1?'s':''}, with report. In a LUT the clip color starts at the grid point at or below clip, so it can warn a little early.`;
+  }catch(e){}
+}
+async function runExport(kind){
   const p=readForm(); if(FCG.validate(p).length) return;
-  const btn=$('exportBtn'), st=$('status'); btn.disabled=true; st.textContent='Building LUTs...';
+  const btn=$(kind==='omni'?'exportBtn':'lutBtn'), st=$('status'); btn.disabled=true; st.textContent=kind==='omni'?'Building presets...':'Building LUTs...';
   await new Promise(r=>setTimeout(r,30));
   try{
-    const ex=FCG.exportAll(p,{date:new Date().toISOString().slice(0,10)});
+    const date=new Date().toISOString().slice(0,10), ex = kind==='omni' ? FCG.exportOmni(exportProfiles(),{date}) : FCG.exportLUTs(exportProfiles(),{date});
     const r=await saveFile(ex.folder+'.zip', ex.zip);
-    st.textContent = r==='declined' ? 'Download cancelled.' : r==='busy' ? 'A save prompt is already open.' : `${ex.files.length} files (${(ex.zip.length/1048576).toFixed(1)} MB) in ${ex.folder}.zip.`;
+    st.textContent = r==='declined' ? 'Download cancelled.' : r==='busy' ? 'A save prompt is already open.' : `${ex.files.length} files in ${ex.folder}.zip.`;
   }catch(err){ st.textContent='Export failed: '+err.message; }
   btn.disabled=false;
-});
+}
+$('exportBtn').addEventListener('click',()=>runExport('omni'));
+$('lutBtn').addEventListener('click',()=>runExport('lut'));
 
 (function credits(){
   const f=$('credits'), seen=[]; DB.forEach(c=>{ if(c.credit) seen.push(c); }); if(!seen.length) return;
