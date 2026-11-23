@@ -675,8 +675,8 @@ var FCG_CAMERAS = [
     credit: { org: 'CineD', tester: 'Gunther Machu (with Florian Milz)', title: 'ARRI ALEXA 35 Xtreme, CineD Lab Database', date: '2026-05-12', url: 'https://www.cined.com/camera-database/' },
     circuits: [
       { name: 'EI 800 (single base)', baseISO: 800, isos: [400, 800, 1600, 3200], isoMode: 'clip',
-        clipMax: 57536, clipOf: 65535, dr2: 15.4, dr1: 16.4, grayCV: 285, grayNominal: true,
-        sources: { range: 'CineD Imatest sheet, 4.6K OG ARRIRAW EI 800 (dated 2026-05-12). The ProRes 4444 XQ sheet agrees (max=57472, DR 15.5 / 16.9). ARRICORE SO 165p is a separate mode (not included).', gray: 'Not metered yet. ARRI LogC4 published 18% gray (0.2784, code 285) used until a metered gray card is added.', iso: 'EI is baked into the log curve: gray stays, clip moves with EI. The EI 3200 ARRIRAW sheet tops out at 1022, the LogC4 ceiling, as predicted.' } }
+        clipCV: 891, dr2: 15.4, dr1: 16.4, grayCV: 285, grayNominal: true,
+        sources: { range: 'Clip: CineD\'s Xyla luma waveform, top patch at about 891 (Imatest max=57536, 898, is the brightest single channel). Range: CineD Imatest sheet, 4.6K OG ARRIRAW EI 800 (dated 2026-05-12). The ProRes 4444 XQ sheet agrees (max=57472, DR 15.5 / 16.9). ARRICORE SO 165p is a separate mode (not included).', gray: 'Not metered yet. ARRI LogC4 published 18% gray (0.2784, code 285) used until a metered gray card is added.', iso: 'EI is baked into the log curve: gray stays, clip moves with EI. The EI 3200 ARRIRAW sheet and waveform both top out at the LogC4 ceiling (about 1022), as predicted.' } }
     ]
   },
   {
