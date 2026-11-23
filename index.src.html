@@ -323,7 +323,12 @@ function clearMeasurements(){
   $('greyCV').placeholder = C ? `Published 18%: ${Math.round(C.enc(0.18)*1023)}. Meter it.` : '';
 }
 fillModels(''); fillCurves(null);
-DB.forEach((c,i)=>{ const o=document.createElement('option'); o.value=String(i); o.textContent=`${c.make} ${c.model} (${c.mode})`; $('camSel').appendChild(o); });
+// Grouped by make, models alphabetical; the value stays the database index.
+[...new Set(DB.map(c=>c.make))].sort().forEach(mk => {
+  const g=document.createElement('optgroup'); g.label=mk;
+  DB.map((c,i)=>[c,i]).filter(([c])=>c.make===mk).sort((a,b)=>a[0].model.localeCompare(b[0].model,undefined,{numeric:true}))
+    .forEach(([c,i]) => { const o=document.createElement('option'); o.value=String(i); o.textContent=`${c.model} (${c.mode})`; g.appendChild(o); });
+  $('camSel').appendChild(g); });
 { const o=document.createElement('option'); o.value='custom'; o.textContent='Custom camera'; $('camSel').appendChild(o); }
 
 function fromDB(ci, ki){
@@ -513,7 +518,7 @@ $('lutBtn').addEventListener('click',()=>runExport('lut'));
     f.appendChild(document.createTextNode(`${c.make} ${c.model} from the `));
     const a=document.createElement('a'); a.href=k.url; a.target='_blank'; a.rel='noopener'; a.textContent=`${k.org} ${k.title}`; f.appendChild(a);
     f.appendChild(document.createTextNode(`, tested by ${k.tester}`)); });
-  f.appendChild(document.createTextNode('. Middle gray and ISO behavior measured separately for this app. Not affiliated with or endorsed by the sources credited.'));
+  f.appendChild(document.createTextNode('. Middle gray is metered for this app where noted; otherwise the log curve\'s published 18% value is used until it is. Not affiliated with or endorsed by the sources credited.'));
 })();
 setOptions(DEFAULTS);
 let restored=false;
