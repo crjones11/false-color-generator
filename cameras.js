@@ -41,8 +41,8 @@ var FCG_CAMERAS = [
     credit: { org: 'CineD', tester: 'Gunther Machu (with Florian Milz)', title: 'ARRI Alexa Classic & Mini LF Lab Test', date: '2021-04-10', url: 'https://www.cined.com/arri-alexa-classic-mini-lf-lab-test-rolling-shutter-dynamic-range-and-latitude/' },
     circuits: [
       { name: 'EI 800', baseISO: 800, isos: [400, 800, 1600], isoMode: 'clip',
-        clipMax: 64832, clipOf: 65535, dr2: 13.8, dr1: 14.8, grayCV: 400, grayNominal: true,
-        sources: { range: 'CineD Imatest sheet, ProRes 2K LogC EI 800 (dated 2021-04-10).', gray: 'Not metered yet. ARRI LogC3 published 18% gray (code 400) used until a metered gray card is added.', iso: 'EI is baked into the log curve: gray stays, clip moves with EI. ARRI publishes LogC3 for EI 160 to 1600 only.' } }
+        clipCV: 966, dr2: 13.8, dr1: 14.8, grayCV: 400, grayNominal: true,
+        sources: { range: 'Clip: CineD\'s Xyla luma waveform, top patch at about 966, matching the Mini LF (Imatest max=64832, 1012, is the brightest single channel). Range: CineD Imatest sheet, ProRes 2K LogC EI 800 (dated 2021-04-10).', gray: 'Not metered yet. ARRI LogC3 published 18% gray (code 400) used until a metered gray card is added.', iso: 'EI is baked into the log curve: gray stays, clip moves with EI. ARRI publishes LogC3 for EI 160 to 1600 only.' } }
     ]
   },
   {
