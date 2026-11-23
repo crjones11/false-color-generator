@@ -67,9 +67,9 @@ var FCG_CAMERAS = [
     id: 'red-vraptorx-8kvv-log3g10', make: 'RED', model: 'V-RAPTOR [X] 8K VV', mode: 'R3D, Log3G10', curve: 'log3g10',
     credit: { org: 'CineD', tester: 'Gunther Machu (with Florian Milz)', title: 'RED V-RAPTOR [X] 8K VV Lab Test', date: '2024-03-14', url: 'https://www.cined.com/red-v-raptor-x-8k-vv-lab-test-dynamic-range-and-exposure-latitude/' },
     circuits: [
-      { name: 'ISO 800', baseISO: 800, isos: [400, 800, 1600, 3200], isoMode: 'clip',
+      { name: 'ISO 800', baseISO: 800, isos: [800, 1280, 2000, 3200], isoMode: 'clip',
         clipMax: 54784, clipOf: 65535, dr2: 12.8, dr1: 14.5, grayCV: 341.3, grayNominal: true,
-        sources: { range: 'CineD Imatest sheet, 8K R3D HQ ISO 800 (dated 2024-03-14). Extended Highlights not tested.', gray: 'Not metered yet. RED Log3G10 published 18% gray (1/3, code 341) used until a metered gray card is added. (The Nikon ZR metered a full stop higher than this.)', iso: 'R3D ISO is set in the decode: gray stays, clip moves with ISO. CineD notes the V-RAPTOR has no defined native ISO.' } }
+        sources: { range: 'CineD Imatest sheet, 8K R3D HQ ISO 800 (dated 2024-03-14). Extended Highlights not tested.', gray: 'Not metered yet. RED Log3G10 published 18% gray (1/3, code 341) used until a metered gray card is added. (The Nikon ZR metered a full stop higher than this.)', iso: 'ISO 1280 and 2000 presets added at the author\'s request, assuming the [X] behaves like the V-RAPTOR 8K VV. R3D ISO is set in the decode: gray stays, clip moves with ISO. CineD notes the V-RAPTOR has no defined native ISO.' } }
     ]
   },
   {
