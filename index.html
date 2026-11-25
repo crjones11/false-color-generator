@@ -788,8 +788,8 @@ var FCG_CAMERAS = [
     ]
   },
   {
-    id: 'sony-venice-slog3-sdi', make: 'Sony', model: 'VENICE', mode: 'S-Log3 SDI out, null LUT (legal)', curve: 'slog3',
-    signal: 'Legal-range S-Log3 on the camera SDI output with a null LUT loaded (captured in Livegrade, legal input). Without a LUT the SDI output is full range and does not change with ISO, so these LUTs are only for the null-LUT setup.',
+    id: 'sony-venice-slog3-sdi', make: 'Sony', model: 'VENICE', mode: 'X-OCN XT or SDI null LUT, S-Log3', curve: 'slog3',
+    signal: 'X-OCN XT files, or the SDI output with a null LUT (legal range). Clip and gray measured on the SDI output; clip matches in X-OCN. Without a LUT the SDI output is full range (not tested here).',
     circuits: [
       { name: 'Base ISO 500', baseISO: 500, isos: [500], isoMode: 'none',
         clipCV: 887, dr2: 13.0, dr1: 14.1, grayCV: 445,
