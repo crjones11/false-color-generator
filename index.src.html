@@ -41,7 +41,7 @@ button.primary:disabled{opacity:.45;cursor:not-allowed}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .tabs button.on{background:#3a4150;border-color:#56607a}
 .preview{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:start}
-@media(max-width:560px){.preview{grid-template-columns:78px 1fr;gap:10px}.stripwrap{margin-left:36px}.tick{left:-36px;width:32px;font-size:10px}#legend td,#legend th{padding:5px 4px}#legend .sw{width:18px}.fl{display:none}th .lg,td .lg{display:none}th .sm,td .sm{display:inline}#headroom{white-space:normal}}
+@media(max-width:560px){.preview{grid-template-columns:78px 1fr;gap:10px}.stripwrap{margin-left:36px}.tick{left:-36px;width:32px;font-size:10px}#legend td,#legend th{padding:5px 4px}#legend .sw{width:18px}.fl{display:none}th .lg,td .lg{display:none}th .sm,td .sm{display:inline}}
 .stripwrap{position:relative;height:560px;margin-left:44px}
 .strip{position:absolute;inset:0;border:1px solid #000;border-radius:3px;overflow:hidden;background:#000}
 .strip div{position:absolute;left:0;right:0}
@@ -86,7 +86,6 @@ footer a{color:#b9c2d6}
 #baseTabs .lbl{font-size:12px;color:var(--dim);align-self:center;margin-right:4px}
 @media(max-width:560px){header{padding:16px 16px 4px}h1{font-size:22px}header p{font-size:13px}.coffee-btn,.guide-btn{font-size:11px;padding:4px 9px}.coffee-btn .lbl{display:none}main{padding:12px 16px 32px}}
 main>div{min-width:0}select{min-width:0;text-overflow:ellipsis}.row>div{min-width:0}
-#headroom{display:block;overflow-x:auto;white-space:nowrap}
 .nw{white-space:nowrap}.sm{display:none}
 details.mini{margin:8px 0 0}details.mini summary{font-size:12px;margin:0}details.mini[open] summary{margin-bottom:6px}
 .setup>summary{margin:0}.setup[open]>summary{margin-bottom:6px}
@@ -207,11 +206,6 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
       <div class="stripwrap" id="stripwrap"><div class="strip" id="strip"></div></div>
       <div><table id="legend"></table><div class="warnbox" id="modelWarn"></div></div>
     </div>
-  </section>
-  <section>
-    <h2>Headroom by ISO</h2>
-    <table id="headroom"></table>
-    <p class="note">Base row measured, others calculated.</p>
   </section>
 </div>
 </main>
@@ -421,8 +415,8 @@ function update(){
 }
 function el(tag, attrs, text){ const e=document.createElement(tag); if(attrs) for(const k in attrs) e.setAttribute(k,attrs[k]); if(text!=null) e.textContent=text; return e; }
 function render(p, models){
-  const tabs=$('tabs'), strip=$('strip'), wrap=$('stripwrap'), legend=$('legend'), head=$('headroom'), big=$('big');
-  tabs.textContent=''; strip.textContent=''; legend.textContent=''; head.textContent=''; big.textContent=''; $('modelWarn').textContent='';
+  const tabs=$('tabs'), strip=$('strip'), wrap=$('stripwrap'), legend=$('legend'), big=$('big');
+  tabs.textContent=''; strip.textContent=''; legend.textContent=''; big.textContent=''; $('modelWarn').textContent='';
   wrap.querySelectorAll('.tick,.mark').forEach(n=>n.remove());
   if(!models){ legend.appendChild(el('tr')).appendChild(el('td',null,'Fix the highlighted values.')); return; }
   const bt=$('baseTabs'); bt.textContent=''; const ci=$('camSel').value;
@@ -460,14 +454,6 @@ function render(p, models){
   const warns=[];
   if(m.clipOutOfRange) warns.push('Clip lands above 1023 at this ISO: the signal tops out before red can show.');
   $('modelWarn').textContent=warns.join(' ');
-  // headroom table
-  const nf=models.every(x=>x.noFloor);
-  const cols = nf ? [['ISO'],['Clip'],['Gray'],['Over gray','Over']] : [['ISO'],['Clip'],['Gray'],['Over gray','Over'],['Under (SNR 2)','SNR 2'],['Under (SNR 1)','SNR 1'],['Floor SNR 2'],['Floor SNR 1']];
-  const hc=i=>i>5?{class:'num fl'}:(i?{class:'num'}:null);
-  const h2=el('tr'); cols.forEach(([h,sh],i)=>{ const th=el('th',hc(i)); if(sh){ th.appendChild(el('span',{class:'lg'},h)); th.appendChild(el('span',{class:'sm'},sh)); } else th.textContent=h; h2.appendChild(th); }); head.appendChild(h2);
-  models.forEach(x=>{ const tr=el('tr'), base=[String(x.iso)+(x.iso===p.baseISO?' base':''), x.clipOutOfRange?'>1023':Math.round(x.clipCV), Math.round(x.greyCV)];
-    const vals = nf ? base.concat(['+'+x.over.toFixed(1)]) : base.concat(x.noFloor ? ['+'+x.over.toFixed(1),'n/a','n/a','n/a','n/a'] : ['+'+x.over.toFixed(1), x.under2.toFixed(1), x.under1.toFixed(1), Math.round(x.floor2CV), Math.round(x.floor1CV)]);
-    vals.forEach((v,i)=>tr.appendChild(el('td',hc(i),String(v)))); head.appendChild(tr); });
 }
 
 $('camSel').addEventListener('change', e=>selectCamera(e.target.value==='custom'?'custom':+e.target.value, 0));
