@@ -76,7 +76,7 @@ textarea{width:100%;height:150px;background:var(--field);border:1px solid var(--
 footer{max-width:1240px;margin:0 auto;padding:0 24px 36px;color:var(--dim);font-size:12px;line-height:1.6}
 footer a{color:#b9c2d6}
 .pz{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px}.pz .tabs{margin:0}
-.pz label{margin:0;font-size:13px;color:var(--text)}.pz input{width:70px;display:inline-block;margin:0 4px;padding:5px 7px}.pz select{width:auto;display:inline-block;margin:0 4px;padding:5px 7px}.pzc{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+
 .hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .coffee-btn{flex:none;font-weight:600;font-size:12px;text-decoration:none;color:#f2c94c;border:1px solid rgba(242,201,76,.55);padding:5px 10px;border-radius:999px;white-space:nowrap}
 .hdl{display:flex;gap:8px;align-items:center;flex:none}.guide-btn{font-weight:600;font-size:12px;text-decoration:none;color:#cfd6e4;border:1px solid var(--line);padding:5px 10px;border-radius:999px;white-space:nowrap}.guide-btn:hover{background:#262a30}
@@ -132,8 +132,9 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
     <summary>Options</summary>
     <div class="row">
       <div><label for="greyBand"><span class="sw" style="background:#00b050;width:14px;height:10px;margin-right:5px"></span>Middle gray band: <b id="greyBandOut"></b></label><input id="greyBand" title="Double-click to reset to ± 0.17" type="range" min="0" max="1" step="0.01" class="slider"></div>
-      <div><label for="lutSize">LUT size</label><select id="lutSize"><option value="33">33 (cameras)</option><option value="65">65 (software)</option><option value="17">17</option></select></div>
+      <div><label for="colorStops">Color stops at each end</label><select id="colorStops"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
     </div>
+    <div class="row"><div><label for="lutSize">LUT size</label><select id="lutSize"><option value="33">33 (cameras)</option><option value="65">65 (software)</option><option value="17">17</option></select></div></div>
     <label class="check"><input type="checkbox" id="conservativeClip"><span>LUT: start clip color at the grid point below clip (never late)</span></label>
     <label class="check"><input type="checkbox" id="inputLegal"><span>LUT: device feeds legal range without expanding it</span></label>
   </details>
@@ -196,10 +197,6 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
     <div class="tabs" id="baseTabs"></div>
     <div class="pz">
       <div class="tabs" id="tabs"></div>
-      <div class="pzc"><label for="colorStops">Color stops
-        <select id="colorStops"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
-      <label for="pictureStops">Picture zone ±
-        <input id="pictureStops" type="number" min="0" max="4" step="0.5"> stops</label></div>
     </div>
     <div class="big" id="big"></div>
     <div class="preview">
@@ -584,7 +581,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
 ${C.verified ? '' : '<p class="w">This log curve formula is not yet checked against the maker\'s document. Verify zones before relying on them.</p>'}
 <h2>Profile</h2>
 ${p.signal ? `<p class="w"><b>Measured on:</b> ${esc(p.signal)}</p>` : ''}
-<table><tr><th>Clip at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Middle gray at base ISO</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured (no shadow colors)</td></tr>' : `<tr><th>Range below clip, SNR 2 / SNR 1</th><td>${p.dr2} / ${p.dr1} stops</td></tr>`}<tr><th>ISO behavior</th><td>${ISO_MODES[isoModeOf(p)]}</td></tr><tr><th>Gray band</th><td>± ${p.greyBand.toFixed(2)} stop</td></tr><tr><th>Picture zone</th><td>± ${(p.pictureStops == null ? 1 : p.pictureStops)} stop</td></tr>${p.colorStops == null ? '' : `<tr><th>Color stops</th><td>${p.colorStops} at each end</td></tr>`}</table>
+<table><tr><th>Clip at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Middle gray at base ISO</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured (no shadow colors)</td></tr>' : `<tr><th>Range below clip, SNR 2 / SNR 1</th><td>${p.dr2} / ${p.dr1} stops</td></tr>`}<tr><th>ISO behavior</th><td>${ISO_MODES[isoModeOf(p)]}</td></tr><tr><th>Gray band</th><td>± ${p.greyBand.toFixed(2)} stop</td></tr>${p.colorStops == null ? '' : `<tr><th>Color stops</th><td>${p.colorStops} at each end</td></tr>`}</table>
 <h2>Headroom by ISO</h2>
 <table><tr><th>ISO</th><th>Clip (CV)</th><th>Gray (CV)</th><th>Over gray</th><th>Under gray to SNR 2</th><th>to SNR 1</th><th>LUT clip color starts (${p.lutSize}-pt)</th></tr>${rows}</table>
 <p>Base ISO row measured; others calculated from the ISO behavior.</p>
@@ -993,7 +990,7 @@ function showBand(){ const v=+$('greyBand').value; $('greyBandOut').textContent=
 $('greyBand').addEventListener('input', showBand);
 $('greyBand').addEventListener('dblclick', ()=>{ $('greyBand').value=DEFAULTS.greyBand; showBand(); update(); });
 function setOptions(o){
-  $('greyBand').value=o.greyBand; showBand(); $('pictureStops').value=o.pictureStops; $('colorStops').value=o.colorStops==null?'':String(o.colorStops); $('lutSize').value=String(o.lutSize);
+  $('greyBand').value=o.greyBand; showBand(); $('colorStops').value=o.colorStops==null?'':String(o.colorStops); $('lutSize').value=String(o.lutSize);
   $('conservativeClip').checked=o.conservativeClip!==false; $('inputLegal').checked=!!o.inputLegal;
 }
 const num = id => { const v=parseFloat($(id).value); return isFinite(v)?v:NaN; };
@@ -1011,7 +1008,7 @@ function readForm(){
     isoList:$('isoList').value.split(/[,\s]+/).filter(Boolean).map(Number),
     isoMode:$('isoMode').value,
     clipCV, greyCV:toFull(num('greyCV'),'greyRange'), dr2:num('dr2'), dr1:num('dr1'), floorKnown:!$('noFloor').checked,
-    greyBand:num('greyBand'), pictureStops:num('pictureStops'), colorStops:$('colorStops').value===''?null:parseInt($('colorStops').value,10), lutSize:parseInt($('lutSize').value,10),
+    greyBand:num('greyBand'), pictureStops:DEFAULTS.pictureStops, colorStops:$('colorStops').value===''?null:parseInt($('colorStops').value,10), lutSize:parseInt($('lutSize').value,10),
     conservativeClip:$('conservativeClip').checked, inputLegal:$('inputLegal').checked
   };
 }
@@ -1093,10 +1090,6 @@ document.querySelectorAll('input,select').forEach(n=>{
   const h=()=>{ if(DATA_IDS.includes(n.id) && $('camSel').value!=='custom'){ $('camSel').value='custom'; fillCircuits('custom'); } update(); };
   n.addEventListener('input', h);
 });
-// Range-limited fields: cap above max at once, raise below min when the field is left (so typing 0.5 isn't cut off at the 0).
-['pictureStops'].forEach(id=>{ const n=$(id), lo=+n.min, hi=+n.max;
-  n.addEventListener('input',()=>{ const v=parseFloat(n.value); if(v>hi){ n.value=hi; update(); } });
-  n.addEventListener('change',()=>{ const v=parseFloat(n.value); if(!isFinite(v)) n.value=DEFAULTS[id]; else if(v<lo) n.value=lo; update(); }); });
 $('copyEntry').addEventListener('click', async ()=>{
   const t=$('dbEntry'); let ok=false;
   try{ await navigator.clipboard.writeText(t.value); ok=true; }catch(e){ t.focus(); t.select(); }
