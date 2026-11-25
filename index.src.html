@@ -78,11 +78,12 @@ footer a{color:#b9c2d6}
 .pz label{margin:0;font-size:13px;color:var(--text)}.pz input{width:70px;display:inline-block;margin:0 4px;padding:5px 7px}
 .hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .coffee-btn{flex:none;font-weight:600;font-size:12px;text-decoration:none;color:#f2c94c;border:1px solid rgba(242,201,76,.55);padding:5px 10px;border-radius:999px;white-space:nowrap}
+.hdl{display:flex;gap:8px;align-items:center;flex:none}.guide-btn{font-weight:600;font-size:12px;text-decoration:none;color:#cfd6e4;border:1px solid var(--line);padding:5px 10px;border-radius:999px;white-space:nowrap}.guide-btn:hover{background:#262a30}
 .coffee-btn:hover{background:rgba(242,201,76,.12)}.coffee-btn:active{opacity:.85}
 .btnlink{display:inline-block;font:inherit;border-radius:7px;border:1px solid #4a7dff;background:#1d2a4a;color:#cfdcff;padding:8px 12px;text-decoration:none}.btnlink:hover{background:#26375f}
 #baseTabs:empty{display:none}#baseTabs{margin-bottom:8px}#baseTabs button{font-weight:600}
 #baseTabs .lbl{font-size:12px;color:var(--dim);align-self:center;margin-right:4px}
-@media(max-width:560px){header{padding:16px 16px 4px}h1{font-size:22px}header p{font-size:13px}.coffee-btn{font-size:11px;padding:4px 9px}.coffee-btn .lbl{display:none}main{padding:12px 16px 32px}}
+@media(max-width:560px){header{padding:16px 16px 4px}h1{font-size:22px}header p{font-size:13px}.coffee-btn,.guide-btn{font-size:11px;padding:4px 9px}.coffee-btn .lbl{display:none}main{padding:12px 16px 32px}}
 main>div{min-width:0}select{min-width:0;text-overflow:ellipsis}.row>div{min-width:0}
 #headroom{display:block;overflow-x:auto;white-space:nowrap}
 .nw{white-space:nowrap}.sm{display:none}
@@ -95,7 +96,8 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
 <body>
 <header>
   <div class="hd"><h1>False Color Generator</h1>
-  <a href="https://venmo.com/codyjonescolor" target="_blank" rel="noopener" class="coffee-btn" title="Tip the developer via Venmo">&#9749; <span class="lbl">Buy me a </span>coffee</a></div>
+  <div class="hdl"><a href="https://github.com/crjones11/false-color-generator#readme" target="_blank" rel="noopener" class="guide-btn">Guide</a>
+  <a href="https://venmo.com/codyjonescolor" target="_blank" rel="noopener" class="coffee-btn" title="Tip the developer via Venmo">&#9749; <span class="lbl">Buy me a </span>coffee</a></div></div>
   <p>OmniScope false color and LUTs from measured camera data. Warm counts down to clip, cool counts up from the noise floor.</p>
 </header>
 <main>
