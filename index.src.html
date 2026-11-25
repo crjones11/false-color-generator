@@ -427,7 +427,7 @@ function render(p, models){
   models.forEach(m=>{ const b=el('button',{type:'button'},(p.isoMode==='none' ? 'All EIs on base ' : 'ISO ')+m.iso); if(m.iso===activeISO) b.className='on'; b.onclick=()=>{activeISO=m.iso; render(p,models);}; tabs.appendChild(b); });
   const m = models.find(x=>x.iso===activeISO) || models[0];
   const stat=(v,l)=>{ const d=el('div'); d.appendChild(el('b',null,v)); d.appendChild(el('span',null,l)); big.appendChild(d); };
-  stat('+'+m.over.toFixed(1), 'stops over gray to clip'); if(m.noFloor) stat('n/a','noise floor not measured'); else { stat(m.under2.toFixed(1), 'stops under gray to SNR 2'); stat(m.under1.toFixed(1), 'to SNR 1'); } stat(m.clipOutOfRange?'>1023':String(Math.round(m.clipCV)), 'clip code value');
+  if(!m.noFloor) stat((m.over+m.under2).toFixed(1), 'stops total (SNR 2)'); stat('+'+m.over.toFixed(1), 'stops over gray to clip'); if(m.noFloor) stat('n/a','noise floor not measured'); else { stat(m.under2.toFixed(1), 'stops under gray to SNR 2'); stat(m.under1.toFixed(1), 'to SNR 1'); } stat(m.clipOutOfRange?'>1023':String(Math.round(m.clipCV)), 'clip code value');
   // strip
   const pct = cv => Math.min(100, Math.max(0, cv/1023*100));
   m.zones.forEach(z=>{
@@ -454,9 +454,13 @@ function render(p, models){
   if(m.clipOutOfRange) warns.push('Clip lands above 1023 at this ISO: the signal tops out before red can show.');
   $('modelWarn').textContent=warns.join(' ');
   // headroom table
-  const nf=models.every(x=>x.noFloor), cols=nf?4:8, hc=i=>i>5?{class:'num fl'}:(i?{class:'num'}:null);
-  const h2=el('tr'); [['ISO'],['Clip'],['Gray'],['Over gray','Over'],['Under (SNR 2)','SNR 2'],['Under (SNR 1)','SNR 1'],['Floor SNR 2'],['Floor SNR 1']].slice(0,cols).forEach(([h,sh],i)=>{ const th=el('th',hc(i)); if(sh){ th.appendChild(el('span',{class:'lg'},h)); th.appendChild(el('span',{class:'sm'},sh)); } else th.textContent=h; h2.appendChild(th); }); head.appendChild(h2);
-  models.forEach(x=>{ const tr=el('tr'); [String(x.iso)+(x.iso===p.baseISO?' base':''), x.clipOutOfRange?'>1023':Math.round(x.clipCV), Math.round(x.greyCV), '+'+x.over.toFixed(1)].concat(x.noFloor ? ['n/a','n/a','n/a','n/a'] : [x.under2.toFixed(1), x.under1.toFixed(1), Math.round(x.floor2CV), Math.round(x.floor1CV)]).slice(0,cols).forEach((v,i)=>tr.appendChild(el('td',hc(i),String(v)))); head.appendChild(tr); });
+  const nf=models.every(x=>x.noFloor);
+  const cols = nf ? [['ISO'],['Clip'],['Gray'],['Over gray','Over']] : [['ISO'],['Clip'],['Gray'],['Over gray','Over'],['Under (SNR 2)','SNR 2'],['Under (SNR 1)','SNR 1'],['Floor SNR 2'],['Floor SNR 1']];
+  const hc=i=>i>5?{class:'num fl'}:(i?{class:'num'}:null);
+  const h2=el('tr'); cols.forEach(([h,sh],i)=>{ const th=el('th',hc(i)); if(sh){ th.appendChild(el('span',{class:'lg'},h)); th.appendChild(el('span',{class:'sm'},sh)); } else th.textContent=h; h2.appendChild(th); }); head.appendChild(h2);
+  models.forEach(x=>{ const tr=el('tr'), base=[String(x.iso)+(x.iso===p.baseISO?' base':''), x.clipOutOfRange?'>1023':Math.round(x.clipCV), Math.round(x.greyCV)];
+    const vals = nf ? base.concat(['+'+x.over.toFixed(1)]) : base.concat(x.noFloor ? ['+'+x.over.toFixed(1),'n/a','n/a','n/a','n/a'] : ['+'+x.over.toFixed(1), x.under2.toFixed(1), x.under1.toFixed(1), Math.round(x.floor2CV), Math.round(x.floor1CV)]);
+    vals.forEach((v,i)=>tr.appendChild(el('td',hc(i),String(v)))); head.appendChild(tr); });
 }
 
 $('camSel').addEventListener('change', e=>selectCamera(e.target.value==='custom'?'custom':+e.target.value, 0));
