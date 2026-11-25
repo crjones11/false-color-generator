@@ -106,8 +106,8 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
     <h2>Camera</h2>
     <div class="row one"><div><label for="camSel">Camera</label><select id="camSel"></select></div></div>
     <div class="row">
-      <div id="circWrap"><label for="circSel">Base ISO</label><select id="circSel"></select></div>
-      <div><label for="isoList">ISOs / EIs to export</label><input id="isoList" placeholder="800, 1600"></div>
+      <div id="circWrap"><label for="circSel">Base</label><select id="circSel"></select></div>
+      <div><label for="isoList" id="isoListLbl">ISOs to export</label><input id="isoList" placeholder="800, 1600"></div>
     </div>
     <p class="note" id="camLine"></p>
     <details class="mini" id="srcBox"><summary>Source notes</summary><p class="note" id="camInfo" style="margin:0"></p></details>
@@ -148,11 +148,11 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
     <div class="tier" id="modelStatus" hidden><span id="modelStatusText"></span> <button type="button" id="loadMeasured" hidden>Load measured data</button></div>
     <div class="warnbox" id="modelNote"></div>
     <div class="row one"><div><label for="curve">Log curve <span id="curveBadge"></span></label><select id="curve"></select></div></div>
-    <div class="row one"><div><label for="baseISO">Base ISO</label><input id="baseISO" inputmode="numeric"></div></div>
+    <div class="row one"><div><label for="baseISO" id="baseLbl">Base ISO</label><input id="baseISO" inputmode="numeric"></div></div>
     <div class="row one"><div><label for="isoMode">At other ISOs / EIs</label>
       <select id="isoMode"><option value="clip">Clip moves, gray stays (ARRI, RED, ZR)</option><option value="gray">Gray moves, clip stays (Cine EI)</option><option value="none">No change (one preset per base)</option></select></div></div>
 
-    <h3>Imatest sheet (base ISO)</h3>
+    <h3>Imatest sheet (at base)</h3>
     <div class="sheet" aria-hidden="true">
       <div class="sh"><b>Density response</b><br>48-bit color<br>max=<mark>50880</mark><i>1</i> of 65535<br>Min, max pxls = ...</div>
       <div class="sh"><b>Dynamic range in f-stops (EV)</b><br>1.0 &nbsp;(Low): &nbsp;<mark>11.5</mark><i>3</i><br>0.5 &nbsp;(Medium): &nbsp;<mark>10.2</mark><i>2</i><br>0.25 (Med-High): 8.91<br>0.1 &nbsp;(High): 6.97</div>
@@ -172,7 +172,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
       <div><label for="clipRange">Read from</label><select id="clipRange"><option value="full">Full range (file)</option><option value="legal">Legal range (SDI)</option></select></div>
     </div>
 
-    <h3>Middle gray (base ISO)</h3>
+    <h3>Middle gray (at base)</h3>
     <p class="hint" style="margin:0 0 10px">Metered 18% card, 10-bit waveform, no LUT.</p>
     <div class="row">
       <div><label for="greyCV">Gray (10-bit CV)</label><input id="greyCV" inputmode="decimal"></div>
@@ -388,6 +388,7 @@ function update(){
   $('manualClip').hidden = !$('clipManual').checked; $('clipMax').disabled = $('clipOf').disabled = $('clipManual').checked;
   const p = readForm(), errs = FCG.validate(p), c = FCG.CURVES[p.curve], ci=$('camSel').value;
   showTier();
+  { const T=FCG.expTerm(p); $('isoListLbl').textContent = p.isoMode==='none' ? 'Base ISO (covers every EI)' : T+'s to export'; $('baseLbl').textContent='Base '+FCG.baseTerm(p); }
   { const e=catModel(p.make, p.model); noteModel();
     if(e && !e[1].some(k=>FCG.CURVES[k])) errs.push(`${p.model}: no published log formula yet.`);
     else if(e && !e[1].includes(p.curve)) $('modelNote').textContent = (($('modelNote').textContent||'') + ` ${c?c.name:'This curve'} isn't listed for this camera.`).trim(); }
@@ -423,7 +424,7 @@ function render(p, models){
     DB[ci].circuits.forEach((k,i)=>{ const b=el('button',{type:'button'},String(k.baseISO)); if(String(i)===$('circSel').value) b.className='on';
       b.onclick=()=>{ if(String(i)!==$('circSel').value) selectCamera(+ci, i); }; bt.appendChild(b); });
   }
-  models.forEach(m=>{ const b=el('button',{type:'button'},(p.isoMode==='none' ? 'All EIs on base ' : 'ISO ')+m.iso); if(m.iso===activeISO) b.className='on'; b.onclick=()=>{activeISO=m.iso; render(p,models);}; tabs.appendChild(b); });
+  models.forEach(m=>{ const b=el('button',{type:'button'},(p.isoMode==='none' ? 'All EIs on base ' : FCG.expTerm(p)+' ')+m.iso); if(m.iso===activeISO) b.className='on'; b.onclick=()=>{activeISO=m.iso; render(p,models);}; tabs.appendChild(b); });
   const m = models.find(x=>x.iso===activeISO) || models[0];
   const stat=(v,l)=>{ const d=el('div'); d.appendChild(el('b',null,v)); d.appendChild(el('span',null,l)); big.appendChild(d); };
   if(!m.noFloor) stat((m.over+m.under2).toFixed(1), 'stops total (SNR 2)'); stat('+'+m.over.toFixed(1), 'stops over gray to clip'); if(m.noFloor) stat('n/a','noise floor not measured'); else { stat(m.under2.toFixed(1), 'stops under gray to SNR 2'); stat(m.under1.toFixed(1), 'to SNR 1'); } stat(m.clipOutOfRange?'>1023':String(Math.round(m.clipCV)), 'clip code value');
@@ -450,7 +451,7 @@ function render(p, models){
     legend.appendChild(tr);
   });
   const warns=[];
-  if(m.clipOutOfRange) warns.push('Clip lands above 1023 at this ISO: the signal tops out before red can show.');
+  if(m.clipOutOfRange) warns.push(`Clip lands above 1023 at this ${FCG.expTerm(p)}: the signal tops out before red can show.`);
   $('modelWarn').textContent=warns.join(' ');
 }
 
@@ -490,10 +491,10 @@ function exportProfiles(){
 }
 function describeExports(){
   try{ const ps=exportProfiles(); if(ps.some(p=>FCG.validate(p).length)) { $('omniWhat').textContent=''; $('lutWhat').textContent=''; return; }
-    const names=[]; ps.forEach(p=>{ const seen=new Set(); p.isoList.forEach(iso=>{ const m=FCG.buildModel(p,iso), key=m.zones.map(z=>z.kind+Math.round(z.loCV*100)).join('|'); if(!seen.has(key)){ seen.add(key); names.push(FCG.ISO_MODES && p.isoMode==='none' ? `base ${p.baseISO} (all EIs)` : `ISO ${iso}`); } }); });
+    const names=[]; ps.forEach(p=>{ const seen=new Set(); p.isoList.forEach(iso=>{ const m=FCG.buildModel(p,iso), key=m.zones.map(z=>z.kind+Math.round(z.loCV*100)).join('|'); if(!seen.has(key)){ seen.add(key); names.push(FCG.ISO_MODES && p.isoMode==='none' ? `base ${p.baseISO} (all EIs)` : `${FCG.expTerm(p)} ${iso}`); } }); });
     $('omniWhat').textContent=`${names.length} preset${names.length>1?'s':''}: ${names.join(', ')}, plus report.`;
     const n=ps.reduce((s,p)=>s+p.isoList.length,0);
-    $('lutWhat').textContent=`Full and Legal ${ps[0].lutSize}-point LUTs, ${n} ISO${n>1?'s':''}, plus report. LUT clip can warn slightly early.`;
+    $('lutWhat').textContent=`Full and Legal ${ps[0].lutSize}-point LUTs, ${n} ${ps[0].isoMode==='none'?'base':FCG.expTerm(ps[0])}${n>1?'s':''}, plus report. LUT clip can warn slightly early.`;
   }catch(e){}
 }
 async function runExport(kind){

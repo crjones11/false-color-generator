@@ -177,19 +177,22 @@
     if (e.length) return e;
     if (p.greyCV >= p.clipCV) e.push('Middle gray must be below the clip level.');
     if (!noFloor && p.dr1 < p.dr2) e.push('Range at SNR 1 must be at least the range at SNR 2.');
-    if (!Array.isArray(p.isoList) || !p.isoList.length || p.isoList.some(i => !(i >= 25 && i <= 409600))) e.push('ISO list must contain at least one valid ISO.');
+    if (!Array.isArray(p.isoList) || !p.isoList.length || p.isoList.some(i => !(i >= 25 && i <= 409600))) e.push('Add at least one valid ISO or EI to export.');
     if (p.isoMode != null && !ISO_MODES[p.isoMode]) e.push('Unknown ISO behavior.');
     const PC = CURVES[p.curve];
     if (PC.perEI) {
       const bad = [p.baseISO].concat(p.isoList || []).filter(i => !PC.eis.includes(i));
       if (bad.length) e.push(`${PC.name} has a published curve only for EI ${PC.eis.join(', ')}. Not available: ${[...new Set(bad)].join(', ')}.`);
-      if (isoModeOf(p) !== 'clip') e.push(`${PC.name} bakes the EI into the curve: gray stays at 400 and clip moves. Set ISO behavior to "Clip moves with ISO, metered gray stays".`);
+      if (isoModeOf(p) !== 'clip') e.push(`${PC.name} bakes the EI into the curve: gray stays at 400 and clip moves. Set the ISO / EI behavior to "Clip moves".`);
     }
     if (![17, 33, 65].includes(p.lutSize)) e.push('LUT size must be 17, 33 or 65.');
     return e;
   }
 
-  const ISO_MODES = { clip: 'Clip moves with ISO, metered gray stays', gray: 'Metered gray moves with EI, clip stays (Cine EI)', none: 'Base ISO only, no shift' };
+  // Maker's own word for the exposure setting: ARRI and Cine EI cameras say EI, everyone else ISO. The base is EI only on ARRI.
+  const expTerm = p => (/^arri$/i.test(String(p.make || '').trim()) || isoModeOf(p) === 'gray') ? 'EI' : 'ISO';
+  const baseTerm = p => /^arri$/i.test(String(p.make || '').trim()) ? 'EI' : 'ISO';
+  const ISO_MODES = { clip: 'Clip moves with ISO / EI, metered gray stays', gray: 'Metered gray moves with EI, clip stays (Cine EI)', none: 'Base only, no shift with EI' };
   function isoModeOf(p) { return ISO_MODES[p.isoMode] ? p.isoMode : (p.isoShifts === false ? 'none' : 'clip'); }
 
   // ---- Zone model for one ISO ----
@@ -311,7 +314,7 @@
   }
 
   // ---- OmniScope export: one preset per distinct zone set, across all bases of a camera ----
-  function omniName(p, m) { return `${clean(p.make)}_${clean(p.model)}_${CURVES[p.curve].short}_` + (isoModeOf(p) === 'none' ? `Base${p.baseISO}_AllEI` : `ISO${m.iso}`) + '_OmniScope.tfc4'; }
+  function omniName(p, m) { return `${clean(p.make)}_${clean(p.model)}_${CURVES[p.curve].short}_` + (isoModeOf(p) === 'none' ? `Base${p.baseISO}_AllEI` : `${expTerm(p)}${m.iso}`) + '_OmniScope.tfc4'; }
   function omniSets(profiles) {
     const out = [];
     for (const p of profiles) {
@@ -348,7 +351,7 @@
 
   // ---- File naming ----
   const clean = s => String(s || '').trim().replace(/[^A-Za-z0-9.+-]+/g, '_').replace(/^_+|_+$/g, '') || 'Camera';
-  function fileBase(p, iso) { return `${clean(p.make)}_${clean(p.model)}_${CURVES[p.curve].short}_ISO${iso}_FalseColor`; }
+  function fileBase(p, iso) { return `${clean(p.make)}_${clean(p.model)}_${CURVES[p.curve].short}_${expTerm(p)}${iso}_FalseColor`; }
 
   // ---- Report ----
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -361,21 +364,22 @@
       const u = v => isFinite(v) ? f1(v) : 'not measured';
       return `<tr><td>${m.iso}</td><td>${m.clipOutOfRange ? 'above 1023' : f0(m.clipCV)}</td><td>${f0(m.greyCV)}</td><td>+${f1(m.over)}</td><td>${u(m.under2)}</td><td>${u(m.under1)}</td><td>${f0(t)} (${early.toFixed(2)} stop early)</td></tr>`;
     }).join('');
-    const legend = models.map(m => `<h3>ISO ${m.iso}</h3><table><tr><th></th><th>Zone</th><th>Code values (full)</th><th>On a legal SDI waveform</th></tr>` +
+    const T = expTerm(p), B = baseTerm(p);
+    const legend = models.map(m => `<h3>${isoModeOf(p) === 'none' ? `Base ${B} ${m.iso}, every EI` : `${T} ${m.iso}`}</h3><table><tr><th></th><th>Zone</th><th>Code values (full)</th><th>On a legal SDI waveform</th></tr>` +
       m.zones.map(z => `<tr><td><span class="sw" style="background:${z.color || 'linear-gradient(#bbb,#555)'}"></span></td><td>${esc(z.label)}</td><td>${f0(Math.max(0, z.loCV))} to ${f0(Math.min(1023, z.hiCV))}</td><td>${f0(fullToLegalCV(Math.max(0, z.loCV)))} to ${f0(fullToLegalCV(Math.min(1023, z.hiCV)))}</td></tr>`).join('') + '</table>').join('');
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>False color report: ${esc(p.make)} ${esc(p.model)}</title>
 <style>body{font:14px/1.5 -apple-system,Segoe UI,sans-serif;max-width:860px;margin:32px auto;padding:0 16px;color:#111}table{border-collapse:collapse;margin:8px 0 20px}td,th{border:1px solid #ccc;padding:4px 10px;text-align:left}th{background:#f1f1f1}.sw{display:inline-block;width:28px;height:14px;border:1px solid #888}.w{background:#fff6d6;border:1px solid #e0c060;padding:8px 12px}</style></head><body>
 <h1>False color report</h1>
-<p><b>${esc(p.make)} ${esc(p.model)}</b>, ${esc(C.name)}, base ISO ${p.baseISO}. Generated ${esc(opts.date || '')}.</p>
+<p><b>${esc(p.make)} ${esc(p.model)}</b>, ${esc(C.name)}, base ${B} ${p.baseISO}. Generated ${esc(opts.date || '')}.</p>
 ${C.verified ? '' : '<p class="w">This log curve formula is not yet checked against the maker\'s document. Verify zones before relying on them.</p>'}
 <h2>Profile</h2>
 ${p.signal ? `<p class="w"><b>Measured on:</b> ${esc(p.signal)}</p>` : ''}
-<table><tr><th>Clip at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Middle gray at base ISO</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured (no shadow colors)</td></tr>' : `<tr><th>Range below clip, SNR 2 / SNR 1</th><td>${p.dr2} / ${p.dr1} stops</td></tr>`}<tr><th>ISO behavior</th><td>${ISO_MODES[isoModeOf(p)]}</td></tr><tr><th>Gray band</th><td>± ${p.greyBand.toFixed(2)} stop</td></tr>${p.colorStops == null ? '' : `<tr><th>Color stops</th><td>${p.colorStops} at each end</td></tr>`}</table>
-<h2>Headroom by ISO</h2>
-<table><tr><th>ISO</th><th>Clip (CV)</th><th>Gray (CV)</th><th>Over gray</th><th>Under gray to SNR 2</th><th>to SNR 1</th><th>LUT clip color starts (${p.lutSize}-pt)</th></tr>${rows}</table>
-<p>Base ISO row measured; others calculated from the ISO behavior.</p>
+<table><tr><th>Clip at base ${B}</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Middle gray at base ${B}</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured (no shadow colors)</td></tr>' : `<tr><th>Range below clip, SNR 2 / SNR 1</th><td>${p.dr2} / ${p.dr1} stops</td></tr>`}<tr><th>${T === 'EI' || isoModeOf(p) === 'none' ? 'EI' : 'ISO'} behavior</th><td>${ISO_MODES[isoModeOf(p)]}</td></tr><tr><th>Gray band</th><td>± ${p.greyBand.toFixed(2)} stop</td></tr>${p.colorStops == null ? '' : `<tr><th>Color stops</th><td>${p.colorStops} at each end</td></tr>`}</table>
+<h2>Headroom by ${isoModeOf(p) === 'none' ? 'base' : T}</h2>
+<table><tr><th>${isoModeOf(p) === 'none' ? `Base ${B}` : T}</th><th>Clip (CV)</th><th>Gray (CV)</th><th>Over gray</th><th>Under gray to SNR 2</th><th>to SNR 1</th><th>LUT clip color starts (${p.lutSize}-pt)</th></tr>${rows}</table>
+${isoModeOf(p) === 'none' ? '' : `<p>Base ${B} row measured; others calculated.</p>`}
 <h2>Reading it</h2>
-<ul><li>Warm counts down from clip (LUT: brightest channel; OmniScope: luma).</li><li>${p.floorKnown === false ? 'No noise data: no shadow colors.' : 'Cool counts up from the SNR 2 noise floor.'}</li><li>Green is middle gray; gray between zones is picture.</li><li>${isoModeOf(p) === 'none' ? `One preset covers every EI on base ${p.baseISO}.` : 'One file per ISO. A higher-ISO file used at a lower ISO can hide clipping.'}</li></ul>
+<ul><li>Warm counts down from clip (LUT: brightest channel; OmniScope: luma).</li><li>${p.floorKnown === false ? 'No noise data: no shadow colors.' : 'Cool counts up from the SNR 2 noise floor.'}</li><li>Green is middle gray; gray between zones is picture.</li><li>${isoModeOf(p) === 'none' ? `One preset covers every EI on base ${p.baseISO}.` : `One file per ${T}. A higher-${T} file used at a lower ${T} can hide clipping.`}</li></ul>
 <h2>Files and setup</h2>
 <ul><li><b>OmniScope (.tfc4)</b>: Color Management Input <i>Raw</i>, <i>Preserve working display view in analysis</i> off. SDI or Livegrade (legal): <i>Scale the video/SDI range to the full range</i> on. Resolve OFX plugin: Timeline Full; put the node before any look, since bypassing color also bypasses OmniScope. A converted input shows red far too early. Luma only, so a single clipped channel won't turn red.</li><li><b>Full LUT</b>: in-camera LUT slot, or a device that scales its own output.</li><li><b>Legal LUT</b>: output scaled to 64–940, for a device that writes LUT output straight to SDI.</li>${opts.inputLegal ? '<li>Built for a legal-range input the device does not expand.</li>' : ''}</ul>
 <h2>Check on set</h2>
@@ -417,7 +421,7 @@ ${p.credit ? `<p>Dynamic range: <a href="${esc(p.credit.url)}">${esc(p.credit.or
         text: makeCube(m, {
           size: p.lutSize, output, inputLegal: !!p.inputLegal, conservativeClip: p.conservativeClip !== false,
           title: `${base}_${tag}`,
-          comments: [`False Color Generator`, `${p.make} ${p.model} | ${CURVES[p.curve].name} | ${isoModeOf(p) === 'none' ? `base ISO ${m.iso}, every EI` : `ISO ${m.iso} only`}`,
+          comments: [`False Color Generator`, `${p.make} ${p.model} | ${CURVES[p.curve].name} | ${isoModeOf(p) === 'none' ? `base ${baseTerm(p)} ${m.iso}, every EI` : `${expTerm(p)} ${m.iso} only`}`,
             `clip ${Math.round(m.clipCV)} gray ${Math.round(m.greyCV)} (10-bit full range) | +${m.over.toFixed(1)} stops over gray`,
             `input ${p.inputLegal ? 'legal (unexpanded)' : 'full'} | output ${output}`, ...(p.signal ? ['measured on: ' + p.signal] : [])]
         })
@@ -428,5 +432,5 @@ ${p.credit ? `<p>Dynamic range: <a href="${esc(p.credit.url)}">${esc(p.credit.or
     return { folder, files, models, zip: makeZip(files) };
   }
 
-  return { curveAt, UNPUBLISHED_CURVES, exportOmni, exportLUTs, omniName, ISO_MODES, CURVES, PALETTE, validate, buildModel, clipThreshold, classify, makeCube, makeTfc4, makeReport, makeZip, crc32, exportAll, fileBase, fullToLegalCV, legalToFullCV };
+  return { expTerm, baseTerm, curveAt, UNPUBLISHED_CURVES, exportOmni, exportLUTs, omniName, ISO_MODES, CURVES, PALETTE, validate, buildModel, clipThreshold, classify, makeCube, makeTfc4, makeReport, makeZip, crc32, exportAll, fileBase, fullToLegalCV, legalToFullCV };
 });
