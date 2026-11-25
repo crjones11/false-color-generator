@@ -86,6 +86,8 @@ footer a{color:#b9c2d6}
 main>div{min-width:0}select{min-width:0;text-overflow:ellipsis}.row>div{min-width:0}
 #headroom{display:block;overflow-x:auto;white-space:nowrap}
 .nw{white-space:nowrap}.sm{display:none}
+details.mini{margin:8px 0 0}details.mini summary{font-size:12px;margin:0}details.mini[open] summary{margin-bottom:6px}
+.setup>summary{margin:0}.setup[open]>summary{margin-bottom:6px}
 .setup{background:var(--field);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--dim);margin:10px 0 14px;line-height:1.5}.setup b{color:var(--text)}.setup ul{margin:4px 0 6px;padding-left:18px}
 button.second{width:100%;padding:9px 14px;font-weight:600}
 </style>
@@ -94,18 +96,19 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
 <header>
   <div class="hd"><h1>False Color Generator</h1>
   <a href="https://venmo.com/codyjonescolor" target="_blank" rel="noopener" class="coffee-btn" title="Tip the developer via Venmo">&#9749; <span class="lbl">Buy me a </span>coffee</a></div>
-  <p>Clip-anchored false color presets for OmniScope, plus matching LUTs, from measured camera data. Warm colors count down to clip, cool colors count up from the noise floor.</p>
+  <p>OmniScope false color and LUTs from measured camera data. Warm counts down to clip, cool counts up from the noise floor.</p>
 </header>
 <main>
 <div>
   <section>
     <h2>Camera</h2>
-    <div class="row one"><div><label for="camSel">Camera system</label><select id="camSel"></select></div></div>
+    <div class="row one"><div><label for="camSel">Camera</label><select id="camSel"></select></div></div>
     <div class="row">
-      <div id="circWrap"><label for="circSel">Native ISO circuit</label><select id="circSel"></select></div>
-      <div><label for="isoList">ISOs to export</label><input id="isoList" placeholder="800, 1600"></div>
+      <div id="circWrap"><label for="circSel">Base ISO</label><select id="circSel"></select></div>
+      <div><label for="isoList">ISOs / EIs to export</label><input id="isoList" placeholder="800, 1600"></div>
     </div>
-    <p class="note" id="camInfo"></p>
+    <p class="note" id="camLine"></p>
+    <details class="mini" id="srcBox"><summary>Source notes</summary><p class="note" id="camInfo" style="margin:0"></p></details>
     <div class="warnbox" id="curveNote"></div>
   </section>
 
@@ -113,9 +116,11 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
     <ul id="errors"></ul>
     <button class="primary" id="exportBtn" type="button">Download OmniScope presets</button>
     <p class="note" id="omniWhat"></p>
-    <div class="setup"><b>OmniScope setup</b> (Common settings)
-      <ul><li>Color Management Input: <b>Raw</b> (Working can stay Rec.709)</li><li>Preserve working display view in analysis: <b>off</b></li><li>Scale the video/SDI range to the full range: <b>on</b></li></ul>
-      OmniScope judges brightness (luma) only, so a saturated highlight can clip one channel before it turns red.</div>
+    <details class="setup"><summary><b>OmniScope setup</b></summary>
+      <ul><li>Input: <b>Raw</b>. Preserve working display view in analysis: <b>off</b>.</li>
+      <li>SDI or Livegrade (legal range): Scale the video/SDI range to the full range <b>on</b>.</li>
+      <li>Resolve OFX plugin: Timeline <b>Full</b>. Put the node before any look, or disable the look nodes. Bypassing color also bypasses OmniScope.</li>
+      <li>False color reads luma, so a saturated highlight can clip one channel before it turns red.</li></ul></details>
     <button class="second" id="lutBtn" type="button">Download LUT set (.cube)</button>
     <p class="note" id="lutWhat"></p>
     <div id="status"></div>
@@ -124,15 +129,15 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
   <details class="box">
     <summary>Options</summary>
     <div class="row">
-      <div><label for="greyBand">Gray band, plus or minus (stops)</label><input id="greyBand" inputmode="decimal"></div>
+      <div><label for="greyBand">Gray band (± stops)</label><input id="greyBand" inputmode="decimal"></div>
       <div><label for="lutSize">LUT size</label><select id="lutSize"><option value="33">33 (cameras)</option><option value="65">65 (software)</option><option value="17">17</option></select></div>
     </div>
-    <label class="check"><input type="checkbox" id="conservativeClip"><span>Start the clip color at the grid point at or below clip, so the warning is never late.</span></label>
-    <label class="check"><input type="checkbox" id="inputLegal"><span>Advanced: the device feeds a legal-range signal into the LUT without expanding it.</span></label>
+    <label class="check"><input type="checkbox" id="conservativeClip"><span>LUT: start clip color at the grid point below clip (never late)</span></label>
+    <label class="check"><input type="checkbox" id="inputLegal"><span>LUT: device feeds legal range without expanding it</span></label>
   </details>
 
   <details class="box" id="dataBox">
-    <summary>Camera data (view, edit, or add a camera)</summary>
+    <summary>Camera data</summary>
     <div class="row">
       <div><label for="makeSel">Make</label><select id="makeSel"></select><input id="make" autocomplete="off" placeholder="Type the make" hidden></div>
       <div><label for="modelSel">Model</label><select id="modelSel"></select><input id="model" autocomplete="off" placeholder="Type the model" hidden></div>
@@ -140,44 +145,43 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
     <div class="tier" id="modelStatus" hidden><span id="modelStatusText"></span> <button type="button" id="loadMeasured" hidden>Load measured data</button></div>
     <div class="warnbox" id="modelNote"></div>
     <div class="row one"><div><label for="curve">Log curve <span id="curveBadge"></span></label><select id="curve"></select></div></div>
-    <div class="row one"><div><label for="baseISO">Base ISO of this circuit</label><input id="baseISO" inputmode="numeric"></div></div>
-    <div class="row one"><div><label for="isoMode">How the camera behaves at other ISOs or EIs</label>
-      <select id="isoMode"><option value="clip">Clip moves with ISO, metered gray stays (e.g. Nikon ZR)</option><option value="gray">Metered gray moves with EI, clip stays (Sony Cine EI)</option><option value="none">Base ISO only, no shift</option></select></div></div>
-    <p class="hint">Confirm with one frame at a non-base ISO or EI: meter a gray card at that setting and read gray and clip.</p>
+    <div class="row one"><div><label for="baseISO">Base ISO</label><input id="baseISO" inputmode="numeric"></div></div>
+    <div class="row one"><div><label for="isoMode">At other ISOs / EIs</label>
+      <select id="isoMode"><option value="clip">Clip moves, gray stays (ARRI, RED, ZR)</option><option value="gray">Gray moves, clip stays (Cine EI)</option><option value="none">No change (one preset per base)</option></select></div></div>
 
-    <h3>From the Imatest sheet (base ISO)</h3>
+    <h3>Imatest sheet (base ISO)</h3>
     <div class="sheet" aria-hidden="true">
       <div class="sh"><b>Density response</b><br>48-bit color<br>max=<mark>50880</mark><i>1</i> of 65535<br>Min, max pxls = ...</div>
       <div class="sh"><b>Dynamic range in f-stops (EV)</b><br>1.0 &nbsp;(Low): &nbsp;<mark>11.5</mark><i>3</i><br>0.5 &nbsp;(Medium): &nbsp;<mark>10.2</mark><i>2</i><br>0.25 (Med-High): 8.91<br>0.1 &nbsp;(High): 6.97</div>
     </div>
-    <p class="hint" style="margin-top:8px">Type the three highlighted numbers exactly as printed. The app does the math.</p>
-    <div class="row one"><div><label for="clipMax"><span class="n">1</span> "max=" value in the Density response box</label>
+    <p class="hint" style="margin-top:8px">Type the highlighted numbers as printed.</p>
+    <div class="row one"><div><label for="clipMax"><span class="n">1</span> max=</label>
       <div class="pair"><input id="clipMax" inputmode="numeric"><span>of</span><input id="clipOf" inputmode="numeric"></div></div></div>
     <p class="hint" id="clipCalc"></p>
     <div class="row" id="drRow">
-      <div><label for="dr2"><span class="n">2</span> "0.5 (Medium)" row</label><input id="dr2" inputmode="decimal"></div>
-      <div><label for="dr1"><span class="n">3</span> "1.0 (Low)" row</label><input id="dr1" inputmode="decimal"></div>
+      <div><label for="dr2"><span class="n">2</span> 0.5 (Medium)</label><input id="dr2" inputmode="decimal"></div>
+      <div><label for="dr1"><span class="n">3</span> 1.0 (Low)</label><input id="dr1" inputmode="decimal"></div>
     </div>
-    <label class="check"><input type="checkbox" id="noFloor"><span>No noise data for this camera: no shadow colors, the picture shows in gray all the way down.</span></label>
-    <label class="check"><input type="checkbox" id="clipManual"><span>No Imatest sheet for the clip level: enter it as a code value instead.</span></label>
+    <label class="check"><input type="checkbox" id="noFloor"><span>No noise data (no shadow colors)</span></label>
+    <label class="check"><input type="checkbox" id="clipManual"><span>Enter clip as a code value</span></label>
     <div class="row" id="manualClip" hidden>
-      <div><label for="clipCV">Clip level (10-bit code value)</label><input id="clipCV" inputmode="decimal"></div>
+      <div><label for="clipCV">Clip (10-bit CV)</label><input id="clipCV" inputmode="decimal"></div>
       <div><label for="clipRange">Read from</label><select id="clipRange"><option value="full">Full range (file)</option><option value="legal">Legal range (SDI)</option></select></div>
     </div>
 
-    <h3>Metered middle gray (base ISO)</h3>
-    <p class="hint" style="margin:0 0 10px">Meter an 18% gray card, set the camera to the meter, and read the card's level on a 10-bit waveform with no LUT or grade applied.</p>
+    <h3>Middle gray (base ISO)</h3>
+    <p class="hint" style="margin:0 0 10px">Metered 18% card, 10-bit waveform, no LUT.</p>
     <div class="row">
-      <div><label for="greyCV">Gray card level (code value)</label><input id="greyCV" inputmode="decimal"></div>
+      <div><label for="greyCV">Gray (10-bit CV)</label><input id="greyCV" inputmode="decimal"></div>
       <div><label for="greyRange">Read from</label><select id="greyRange"><option value="full">Full range (file)</option><option value="legal">Legal range (SDI)</option></select></div>
     </div>
 
-    <h3>Database entry for this circuit</h3>
-    <p class="hint" style="margin:0 0 8px">"Submit" opens a pre-filled issue on the project's GitHub page (a free GitHub account is needed). Nothing is sent until you post it. Add where the numbers came from so the camera can be verified and added for everyone.</p>
+    <h3>Database entry</h3>
+    <p class="hint" style="margin:0 0 8px">Submit opens a pre-filled GitHub issue (free account). Nothing posts until you do.</p>
     <textarea id="dbEntry" readonly spellcheck="false"></textarea>
     <div class="btns" style="margin-top:8px">
       <button type="button" id="copyEntry">Copy entry</button>
-      <a id="submitCam" class="btnlink" href="#" target="_blank" rel="noopener">Submit this camera for review</a>
+      <a id="submitCam" class="btnlink" href="#" target="_blank" rel="noopener">Submit camera</a>
       <button type="button" id="importBtn">Load profile.json</button>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
@@ -190,8 +194,8 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
     <div class="tabs" id="baseTabs"></div>
     <div class="pz">
       <div class="tabs" id="tabs"></div>
-      <label for="pictureStops">Picture zone: keep at least
-        <input id="pictureStops" type="number" min="0" max="4" step="0.5"> stops either side of gray as picture</label>
+      <label for="pictureStops">Picture zone ±
+        <input id="pictureStops" type="number" min="0" max="4" step="0.5"> stops</label>
     </div>
     <div class="big" id="big"></div>
     <div class="preview">
@@ -202,7 +206,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
   <section>
     <h2>Headroom by ISO</h2>
     <table id="headroom"></table>
-    <p class="note">Only the base ISO row is measured. Other rows are calculated from the ISO difference in stops, using the camera's ISO behavior.</p>
+    <p class="note">Base row measured, others calculated.</p>
   </section>
 </div>
 </main>
@@ -575,21 +579,21 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
 <style>body{font:14px/1.5 -apple-system,Segoe UI,sans-serif;max-width:860px;margin:32px auto;padding:0 16px;color:#111}table{border-collapse:collapse;margin:8px 0 20px}td,th{border:1px solid #ccc;padding:4px 10px;text-align:left}th{background:#f1f1f1}.sw{display:inline-block;width:28px;height:14px;border:1px solid #888}.w{background:#fff6d6;border:1px solid #e0c060;padding:8px 12px}</style></head><body>
 <h1>False color report</h1>
 <p><b>${esc(p.make)} ${esc(p.model)}</b>, ${esc(C.name)}, base ISO ${p.baseISO}. Generated ${esc(opts.date || '')}.</p>
-${C.verified ? '' : '<p class="w">The formula for this log curve has not yet been checked against the manufacturer\'s document. Verify zone positions before relying on these LUTs.</p>'}
+${C.verified ? '' : '<p class="w">This log curve formula is not yet checked against the maker\'s document. Verify zones before relying on them.</p>'}
 <h2>Profile</h2>
 ${p.signal ? `<p class="w"><b>Measured on:</b> ${esc(p.signal)}</p>` : ''}
-<table><tr><th>Clip level at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Metered middle gray at base ISO</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured. Below gray the picture shows in gray, with no shadow colors.</td></tr>' : `<tr><th>Range below clip at SNR 2</th><td>${p.dr2} stops</td></tr><tr><th>Range below clip at SNR 1</th><td>${p.dr1} stops</td></tr>`}<tr><th>ISO behavior</th><td>${ISO_MODES[isoModeOf(p)]}</td></tr><tr><th>Gray band</th><td>plus or minus ${p.greyBand.toFixed(2)} stop</td></tr><tr><th>Picture zone</th><td>at least ${(p.pictureStops == null ? 1 : p.pictureStops)} stop(s) either side of gray</td></tr></table>
+<table><tr><th>Clip at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Middle gray at base ISO</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured (no shadow colors)</td></tr>' : `<tr><th>Range below clip, SNR 2 / SNR 1</th><td>${p.dr2} / ${p.dr1} stops</td></tr>`}<tr><th>ISO behavior</th><td>${ISO_MODES[isoModeOf(p)]}</td></tr><tr><th>Gray band</th><td>± ${p.greyBand.toFixed(2)} stop</td></tr><tr><th>Picture zone</th><td>± ${(p.pictureStops == null ? 1 : p.pictureStops)} stop</td></tr></table>
 <h2>Headroom by ISO</h2>
-<table><tr><th>ISO</th><th>Clip (code value)</th><th>Metered gray (code value)</th><th>Stops over gray</th><th>Stops under gray to SNR 2</th><th>to SNR 1</th><th>Clip color starts at (${p.lutSize}-point LUT)</th></tr>${rows}</table>
-<p>Only the base ISO row uses measured values. Other ISOs are calculated from the ISO difference in stops, using the ISO behavior above.</p>
-<h2>How to read the LUT</h2>
-<ul><li>Warm colors count down from clip, judged on the brightest of the three channels.</li><li>${p.floorKnown === false ? 'No noise floor data for this camera, so there are no shadow colors: below gray the picture shows in gray.' : 'Cool colors count up from the SNR 2 noise floor, judged on luma.'}</li><li>Green is metered middle gray. Between the colored zones the picture shows in gray.</li><li>${isoModeOf(p) === 'none' ? `The camera records at its base ISO; on this signal clip and gray do not move with EI, so one LUT covers every EI on base ${p.baseISO}.` : 'Each LUT is valid for one ISO only. Using a higher-ISO LUT at a lower ISO setting can hide clipping.'}</li></ul>
-<h2>Files</h2>
-<ul><li><b>Full</b>: for an in-camera LUT slot, or any device that scales its own output.</li><li><b>OmniScope (.tfc4)</b>: preset for the Nobe OmniScope false color scope. Set OmniScope's Color Management Input to <i>Raw</i> (Working can stay Rec.709), turn <i>Preserve working display view in analysis</i> off, and keep <i>Scale the video/SDI range to the full range</i> on. Otherwise OmniScope analyses a converted image and shows red far too early. It works on luma only, so it cannot flag a single clipped channel the way the LUT does.</li><li><b>Legal</b>: same LUT with output colors scaled to 64-940, for a device that writes LUT output straight to SDI.</li>${opts.inputLegal ? '<li>These LUTs were built for a legal-scaled input signal that the device does not expand.</li>' : ''}</ul>
-<h2>Range check before trusting it on set</h2>
-<ol><li>Load the LUT and point the camera at a light source so part of the frame clips.</li><li>The red clip color should cover the same area as the camera's own clip indicator or 100% zebra.</li><li>If red never appears, or appears far too early, the device and the LUT disagree on full versus legal range. Try the other file.</li></ol>
+<table><tr><th>ISO</th><th>Clip (CV)</th><th>Gray (CV)</th><th>Over gray</th><th>Under gray to SNR 2</th><th>to SNR 1</th><th>LUT clip color starts (${p.lutSize}-pt)</th></tr>${rows}</table>
+<p>Base ISO row measured; others calculated from the ISO behavior.</p>
+<h2>Reading it</h2>
+<ul><li>Warm counts down from clip (LUT: brightest channel; OmniScope: luma).</li><li>${p.floorKnown === false ? 'No noise data: no shadow colors.' : 'Cool counts up from the SNR 2 noise floor.'}</li><li>Green is middle gray; gray between zones is picture.</li><li>${isoModeOf(p) === 'none' ? `One preset covers every EI on base ${p.baseISO}.` : 'One file per ISO. A higher-ISO file used at a lower ISO can hide clipping.'}</li></ul>
+<h2>Files and setup</h2>
+<ul><li><b>OmniScope (.tfc4)</b>: Color Management Input <i>Raw</i>, <i>Preserve working display view in analysis</i> off. SDI or Livegrade (legal): <i>Scale the video/SDI range to the full range</i> on. Resolve OFX plugin: Timeline Full; put the node before any look, since bypassing color also bypasses OmniScope. A converted input shows red far too early. Luma only, so a single clipped channel won't turn red.</li><li><b>Full LUT</b>: in-camera LUT slot, or a device that scales its own output.</li><li><b>Legal LUT</b>: output scaled to 64–940, for a device that writes LUT output straight to SDI.</li>${opts.inputLegal ? '<li>Built for a legal-range input the device does not expand.</li>' : ''}</ul>
+<h2>Check on set</h2>
+<p>Clip a light source in frame. Red should match the camera's clip indicator or 100% zebra. If red never shows or shows far too early, full and legal range disagree: try the other file or setting.</p>
 <h2>Zones</h2>${legend}
-${p.credit ? `<p>Dynamic range measurements from the <a href="${esc(p.credit.url)}">${esc(p.credit.org)} ${esc(p.credit.title)}</a>, tested by ${esc(p.credit.tester)}. Middle gray and ISO behavior measured separately.</p>` : ''}</body></html>`;
+${p.credit ? `<p>Dynamic range: <a href="${esc(p.credit.url)}">${esc(p.credit.org)} ${esc(p.credit.title)}</a>, tested by ${esc(p.credit.tester)}.</p>` : ''}</body></html>`;
   }
 
   // ---- Minimal store-only ZIP ----
@@ -865,7 +869,7 @@ function tierOf(mk, mo){
   const hits = dbFor(mk, mo); if(!hits.length) return 'none';
   return hits.some(([c]) => c.circuits.some(k => k.dr2 != null)) ? 'full' : 'part';
 }
-const TIER_LABEL = { full: 'Measured: clip, gray and noise floor', part: 'Measured: clip and gray (no noise data)', none: 'Curve only: needs your test data' };
+const TIER_LABEL = { full: 'Measured: clip, gray, noise floor', part: 'Measured: clip, gray (no noise data)', none: 'Curve only' };
 function fillModels(mk){
   const sel=$('modelSel'), m=catMake(mk); sel.textContent='';
   sel.appendChild(opt('', m ? 'Pick a model' : (mk ? 'Type the model below' : 'Pick a make first')));
@@ -885,10 +889,10 @@ function showTier(){
   const t=tierOf(mk, mo), hits=dbFor(mk, mo), ci=$('camSel').value;
   box.hidden=false; box.className='tier '+t;
   $('modelStatusText').textContent = t==='none'
-    ? TIER_LABEL.none + ': clip (CineD Imatest "max=" or a clipped frame), metered 18% gray, and the Imatest dynamic range rows for shadow zones.'
-    : (hits.some(([c]) => c.circuits.some(k => k.grayNominal)) ? TIER_LABEL[t].replace('clip, gray and noise floor','clip and noise floor').replace('clip and gray','clip') + '. Gray is the published value until metered' : TIER_LABEL[t])
+    ? TIER_LABEL.none + ': needs clip, metered gray and Imatest DR.'
+    : (hits.some(([c]) => c.circuits.some(k => k.grayNominal)) ? TIER_LABEL[t].replace('clip, gray, noise floor','clip, noise floor').replace('clip, gray','clip') + '. Gray: published value' : TIER_LABEL[t])
       + (hits.some(([c,i]) => String(i)===ci) ? ' (loaded).' : '.')
-      + (hits.some(([c]) => c.curve===$('curve').value) ? '' : ` That data is for ${[...new Set(hits.map(([c])=>c.mode))].join(', ')}. ${FCG.CURVES[$('curve').value]?FCG.CURVES[$('curve').value].name:'This curve'} on this camera is curve only.`);
+      + (hits.some(([c]) => c.curve===$('curve').value) ? '' : ` Measured for ${[...new Set(hits.map(([c])=>c.mode))].join(', ')} only.`);
   const showLoad = t!=='none' && !hits.some(([c,i]) => String(i)===ci);
   $('loadMeasured').hidden = !showLoad;
   $('loadMeasured').onclick = () => selectCamera(hits[0][1], 0);
@@ -912,8 +916,8 @@ function fillCurves(entry){
 function noteModel(){
   const e=catModel($('make').value, $('model').value), bad = e ? e[1].filter(k => !FCG.CURVES[k]) : [];
   $('modelNote').textContent = !e ? '' : !e[1].some(k => FCG.CURVES[k])
-    ? `${bad.map(k=>FCG.UNPUBLISHED_CURVES[k]).join(' and ')} has no published formula, so the app can't place stops on it yet. If the maker publishes one it can be added.`
-    : (bad.length ? `${bad.map(k=>FCG.UNPUBLISHED_CURVES[k]).join(' and ')} on this camera has no published formula and isn't offered.` : '');
+    ? `${bad.map(k=>FCG.UNPUBLISHED_CURVES[k]).join(' and ')}: no published formula yet.`
+    : (bad.length ? `${bad.map(k=>FCG.UNPUBLISHED_CURVES[k]).join(' and ')}: no published formula, not offered.` : '');
 }
 // Put make/model text into the pickers (used when a profile or database camera loads).
 function syncPickers(mk, mo){
@@ -1012,13 +1016,13 @@ function update(){
   const p = readForm(), errs = FCG.validate(p), c = FCG.CURVES[p.curve], ci=$('camSel').value;
   showTier();
   { const e=catModel(p.make, p.model); noteModel();
-    if(e && !e[1].some(k=>FCG.CURVES[k])) errs.push(`The ${p.model} records only curves with no published formula, so it can't be built yet.`);
-    else if(e && !e[1].includes(p.curve)) $('modelNote').textContent = (($('modelNote').textContent||'') + ` ${c?c.name:'This curve'} isn't on this camera's known list. Fine if its firmware added it; otherwise pick one of the curves at the top.`).trim(); }
-  $('clipCalc').textContent = isFinite(p.clipCV) ? `Clip level = code value ${p.clipCV.toFixed(1)} on the 10-bit full-range scale` + (p.clipSource==='imatest' ? ` (${p.clipMax} / ${p.clipOf} x 1023).` : '.') : '';
+    if(e && !e[1].some(k=>FCG.CURVES[k])) errs.push(`${p.model}: no published log formula yet.`);
+    else if(e && !e[1].includes(p.curve)) $('modelNote').textContent = (($('modelNote').textContent||'') + ` ${c?c.name:'This curve'} isn't listed for this camera.`).trim(); }
+  $('clipCalc').textContent = isFinite(p.clipCV) ? `Clip = ${p.clipCV.toFixed(1)} CV (full range)` : '';
   $('curveBadge').innerHTML = c ? (c.verified ? '<span class="badge ok">verified</span>' : '<span class="badge warn">formula unverified</span>') : '';
-  $('curveNote').textContent = c && !c.verified ? ('The ' + c.name + ' formula has not been checked against the manufacturer\'s document yet. ' + (c.note||'')) : '';
-  if(ci!=='custom'){ const k=DB[ci].circuits[$('circSel').value||0], s=k.sources||{}; $('camInfo').textContent = [c?c.name:'', DB[ci].signal&&('Signal: '+DB[ci].signal), s.range&&('Clip: '+s.range), s.gray&&('Gray: '+s.gray), s.iso&&('ISO: '+s.iso)].filter(Boolean).join('\n'); }
-  else $('camInfo').textContent = 'Custom camera: enter its data under "Camera data".';
+  $('curveNote').textContent = c && !c.verified ? (c.name + ' formula not yet checked against the maker\'s document.') : '';
+  if(ci!=='custom'){ const k=DB[ci].circuits[$('circSel').value||0], s=k.sources||{}; $('camLine').textContent = (c?c.name:'') + (k.grayNominal ? ' · gray is the published value until metered' : ''); $('camInfo').textContent = [DB[ci].signal&&('Signal: '+DB[ci].signal), s.range&&('Clip: '+s.range), s.gray&&('Gray: '+s.gray), s.iso&&('ISO: '+s.iso)].filter(Boolean).join('\n'); $('srcBox').hidden=!$('camInfo').textContent; }
+  else { $('camLine').textContent = 'Custom: enter data under Camera data.'; $('srcBox').hidden=true; }
   $('dbEntry').value = JSON.stringify({ make:p.make, model:p.model, curve:p.curve, circuit:{ name:`Base ISO ${p.baseISO}`, baseISO:p.baseISO, isos:p.isoList, isoMode:p.isoMode,
     ...(p.clipSource==='imatest' ? {clipMax:p.clipMax, clipOf:p.clipOf} : {clipCV:Math.round(p.clipCV*10)/10}), ...(p.floorKnown===false ? {} : {dr2:p.dr2, dr1:p.dr1}), grayCV:Math.round(p.greyCV*10)/10, sources:{range:'', gray:'', iso:''} } }, null, 2);
   { const entry=$('dbEntry').value, title=`[Camera] ${p.make||'Unknown'} ${p.model||''} ${c?c.short:''}, base ISO ${isFinite(p.baseISO)?p.baseISO:'?'}`.replace(/\s+/g,' ').trim();
@@ -1039,7 +1043,7 @@ function render(p, models){
   const tabs=$('tabs'), strip=$('strip'), wrap=$('stripwrap'), legend=$('legend'), head=$('headroom'), big=$('big');
   tabs.textContent=''; strip.textContent=''; legend.textContent=''; head.textContent=''; big.textContent=''; $('modelWarn').textContent='';
   wrap.querySelectorAll('.tick,.mark').forEach(n=>n.remove());
-  if(!models){ legend.appendChild(el('tr')).appendChild(el('td',null,'Fix the highlighted values to see the preview.')); return; }
+  if(!models){ legend.appendChild(el('tr')).appendChild(el('td',null,'Fix the highlighted values.')); return; }
   const bt=$('baseTabs'); bt.textContent=''; const ci=$('camSel').value;
   if(ci!=='custom' && DB[ci] && DB[ci].circuits.length>1){
     bt.appendChild(el('span',{class:'lbl'},'Base'));
@@ -1073,7 +1077,7 @@ function render(p, models){
     legend.appendChild(tr);
   });
   const warns=[];
-  if(m.clipOutOfRange) warns.push('At this ISO the sensor clip lands above code value 1023, so the signal tops out before the clip color can show.');
+  if(m.clipOutOfRange) warns.push('Clip lands above 1023 at this ISO: the signal tops out before red can show.');
   $('modelWarn').textContent=warns.join(' ');
   // headroom table
   const nf=models.every(x=>x.noFloor), cols=nf?4:8, hc=i=>i>5?{class:'num fl'}:(i?{class:'num'}:null);
@@ -1118,9 +1122,9 @@ function exportProfiles(){
 function describeExports(){
   try{ const ps=exportProfiles(); if(ps.some(p=>FCG.validate(p).length)) { $('omniWhat').textContent=''; $('lutWhat').textContent=''; return; }
     const names=[]; ps.forEach(p=>{ const seen=new Set(); p.isoList.forEach(iso=>{ const m=FCG.buildModel(p,iso), key=m.zones.map(z=>z.kind+Math.round(z.loCV*100)).join('|'); if(!seen.has(key)){ seen.add(key); names.push(FCG.ISO_MODES && p.isoMode==='none' ? `base ${p.baseISO} (all EIs)` : `ISO ${iso}`); } }); });
-    $('omniWhat').textContent=`${names.length} preset${names.length>1?'s':''}: ${names.join(', ')}. Report included.`;
+    $('omniWhat').textContent=`${names.length} preset${names.length>1?'s':''}: ${names.join(', ')}, plus report.`;
     const n=ps.reduce((s,p)=>s+p.isoList.length,0);
-    $('lutWhat').textContent=`Full and Legal ${ps[0].lutSize}-point LUTs for ${n} ISO${n>1?'s':''}, with report. In a LUT the clip color starts at the grid point at or below clip, so it can warn a little early.`;
+    $('lutWhat').textContent=`Full and Legal ${ps[0].lutSize}-point LUTs, ${n} ISO${n>1?'s':''}, plus report. LUT clip can warn slightly early.`;
   }catch(e){}
 }
 async function runExport(kind){
@@ -1138,13 +1142,11 @@ $('exportBtn').addEventListener('click',()=>runExport('omni'));
 $('lutBtn').addEventListener('click',()=>runExport('lut'));
 
 (function credits(){
-  const f=$('credits'), seen=[]; DB.forEach(c=>{ if(c.credit) seen.push(c); }); if(!seen.length) return;
-  f.appendChild(document.createTextNode('Dynamic range measurements: '));
-  seen.forEach((c,i)=>{ const k=c.credit; if(i) f.appendChild(document.createTextNode('; '));
-    f.appendChild(document.createTextNode(`${c.make} ${c.model} from the `));
-    const a=document.createElement('a'); a.href=k.url; a.target='_blank'; a.rel='noopener'; a.textContent=`${k.org} ${k.title}`; f.appendChild(a);
-    f.appendChild(document.createTextNode(`, tested by ${k.tester}`)); });
-  f.appendChild(document.createTextNode('. Middle gray is metered for this app where noted; otherwise the log curve\'s published 18% value is used until it is. Not affiliated with or endorsed by the sources credited.'));
+  const f=$('credits'), by=new Map(); DB.forEach(c=>{ if(c.credit){ const k=c.credit.org+' Lab, '+c.credit.tester; if(!by.has(k)) by.set(k,[]); by.get(k).push(c); } }); if(!by.size) return;
+  f.appendChild(document.createTextNode('Dynamic range data: '));
+  [...by].forEach(([who,cams],j)=>{ if(j) f.appendChild(document.createTextNode('; ')); f.appendChild(document.createTextNode(who+': '));
+    cams.forEach((c,i)=>{ if(i) f.appendChild(document.createTextNode(', ')); const a=document.createElement('a'); a.href=c.credit.url; a.target='_blank'; a.rel='noopener'; a.textContent=c.model; f.appendChild(a); }); });
+  f.appendChild(document.createTextNode('. Not affiliated with or endorsed by the sources credited.'));
 })();
 setOptions(DEFAULTS);
 let restored=false;
