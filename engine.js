@@ -173,6 +173,7 @@
     if (!noFloor) { num(p.dr2, 'Range at SNR 2', 1, 20); num(p.dr1, 'Range at SNR 1', 1, 20); }
     num(p.greyBand, 'Gray band', 0.02, 1);
     if (p.pictureStops != null) num(p.pictureStops, 'Picture zone', 0, 4);
+    if (p.colorStops != null && !(Number.isInteger(p.colorStops) && p.colorStops >= 0 && p.colorStops <= 8)) e.push('Color stops must be 0 to 8.');
     if (e.length) return e;
     if (p.greyCV >= p.clipCV) e.push('Middle gray must be below the clip level.');
     if (!noFloor && p.dr1 < p.dr2) e.push('Range at SNR 1 must be at least the range at SNR 2.');
@@ -214,8 +215,10 @@
     const band = p.greyBand;
     // Keep at least `pic` stops either side of gray as picture (never less than the gray band itself).
     const pic = Math.max(band, p.pictureStops == null ? 1 : p.pictureStops);
-    const nHi = Math.max(0, Math.min(PALETTE.hi.length, Math.floor(over - pic + 1e-9)));
-    const nLo = noFloor ? 0 : Math.max(0, Math.min(PALETTE.lo.length, Math.floor(under2 - pic + 1e-9)));
+    // Optional cap on colored stops at each end (counted down from clip and up from the floor); the rest is picture.
+    const cap = p.colorStops == null ? Infinity : p.colorStops;
+    const nHi = Math.max(0, Math.min(PALETTE.hi.length, cap, Math.floor(over - pic + 1e-9)));
+    const nLo = noFloor ? 0 : Math.max(0, Math.min(PALETTE.lo.length, cap, Math.floor(under2 - pic + 1e-9)));
     const cv = l => C.enc(l) * 1023;
     const zones = [];
     const add = (kind, n, label, loLin, hiLin, color) => zones.push({ kind, n, label, loLin, hiLin, loCV: loLin === -Infinity ? 0 : cv(loLin), hiCV: hiLin === Infinity ? 1023 : cv(hiLin), color });
@@ -367,7 +370,7 @@
 ${C.verified ? '' : '<p class="w">This log curve formula is not yet checked against the maker\'s document. Verify zones before relying on them.</p>'}
 <h2>Profile</h2>
 ${p.signal ? `<p class="w"><b>Measured on:</b> ${esc(p.signal)}</p>` : ''}
-<table><tr><th>Clip at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Middle gray at base ISO</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured (no shadow colors)</td></tr>' : `<tr><th>Range below clip, SNR 2 / SNR 1</th><td>${p.dr2} / ${p.dr1} stops</td></tr>`}<tr><th>ISO behavior</th><td>${ISO_MODES[isoModeOf(p)]}</td></tr><tr><th>Gray band</th><td>± ${p.greyBand.toFixed(2)} stop</td></tr><tr><th>Picture zone</th><td>± ${(p.pictureStops == null ? 1 : p.pictureStops)} stop</td></tr></table>
+<table><tr><th>Clip at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Middle gray at base ISO</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured (no shadow colors)</td></tr>' : `<tr><th>Range below clip, SNR 2 / SNR 1</th><td>${p.dr2} / ${p.dr1} stops</td></tr>`}<tr><th>ISO behavior</th><td>${ISO_MODES[isoModeOf(p)]}</td></tr><tr><th>Gray band</th><td>± ${p.greyBand.toFixed(2)} stop</td></tr><tr><th>Picture zone</th><td>± ${(p.pictureStops == null ? 1 : p.pictureStops)} stop</td></tr>${p.colorStops == null ? '' : `<tr><th>Color stops</th><td>${p.colorStops} at each end</td></tr>`}</table>
 <h2>Headroom by ISO</h2>
 <table><tr><th>ISO</th><th>Clip (CV)</th><th>Gray (CV)</th><th>Over gray</th><th>Under gray to SNR 2</th><th>to SNR 1</th><th>LUT clip color starts (${p.lutSize}-pt)</th></tr>${rows}</table>
 <p>Base ISO row measured; others calculated from the ISO behavior.</p>

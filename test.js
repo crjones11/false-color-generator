@@ -60,6 +60,15 @@ near(m800.zones[1].loCV, 723.0, 0.2, 'first highlight edge');
 { const w = F.buildModel(Object.assign({}, zr, { pictureStops: 1 }), 800); ok(w.nHi === 4 && w.nLo === 3, `picture 1 stop: ${w.nHi}/${w.nLo}`);
   const mids = w.zones.filter(z => z.kind === 'mid'); ok(Math.log2(mids[0].hiLin / w.greyLin) >= 1 && Math.log2(w.greyLin / mids[1].loLin) >= 1, 'picture reaches at least one stop each side');
   ok(F.buildModel(Object.assign({}, zr, { pictureStops: undefined }), 800).nHi === 4, 'default picture zone is 1 stop'); }
+// Color stops cap: at most N colored stops from clip and from the floor; the rest is picture
+{ const v = { make: 'Sony', model: 'VENICE', curve: 'slog3', baseISO: 500, clipCV: 887, greyCV: 445, dr2: 13.0, dr1: 14.1, isoList: [500], isoMode: 'none', greyBand: 0.17, pictureStops: 1, lutSize: 33, conservativeClip: true };
+  const all = F.buildModel(v, 500), c3 = F.buildModel(Object.assign({}, v, { colorStops: 3 }), 500), c0 = F.buildModel(Object.assign({}, v, { colorStops: 0 }), 500);
+  ok(all.nHi === 4 && all.nLo === 6, `venice all colors ${all.nHi}/${all.nLo}`);
+  ok(c3.nHi === 3 && c3.nLo === 3, `color stops 3: ${c3.nHi}/${c3.nLo}`);
+  ok(c0.nHi === 0 && c0.nLo === 0 && c0.zones.some(z => z.kind === 'clip') && c0.zones.some(z => z.kind === 'noise'), 'color stops 0 keeps clip and noise');
+  ok(Math.abs(c3.zones.find(z => z.kind === 'mid' && z.n === 0).hiLin - c3.clipLin / 8) < 1e-12, 'picture starts 3 stops under clip');
+  ok(F.validate(Object.assign({}, v, { colorStops: 9 })).length > 0 && F.validate(Object.assign({}, v, { colorStops: 3 })).length === 0, 'color stops validated');
+  const pr = F.makeReport(Object.assign({}, v, { colorStops: 3 }), [c3], {}); ok(/Color stops/.test(pr), 'report lists color stops'); }
 // 4. Classification
 const C = F.CURVES.log3g10, e = l => C.enc(l), T = F.clipThreshold(m800, 1024, false);
 const grey = v => F.classify(m800, v, v, v, T), same = (a, b) => a.every((x, i) => Math.abs(x - b[i]) < 1e-9);

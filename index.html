@@ -75,7 +75,7 @@ textarea{width:100%;height:150px;background:var(--field);border:1px solid var(--
 footer{max-width:1240px;margin:0 auto;padding:0 24px 36px;color:var(--dim);font-size:12px;line-height:1.6}
 footer a{color:#b9c2d6}
 .pz{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px}.pz .tabs{margin:0}
-.pz label{margin:0;font-size:13px;color:var(--text)}.pz input{width:70px;display:inline-block;margin:0 4px;padding:5px 7px}
+.pz label{margin:0;font-size:13px;color:var(--text)}.pz input{width:70px;display:inline-block;margin:0 4px;padding:5px 7px}.pz select{width:auto;display:inline-block;margin:0 4px;padding:5px 7px}.pzc{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
 .hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .coffee-btn{flex:none;font-weight:600;font-size:12px;text-decoration:none;color:#f2c94c;border:1px solid rgba(242,201,76,.55);padding:5px 10px;border-radius:999px;white-space:nowrap}
 .hdl{display:flex;gap:8px;align-items:center;flex:none}.guide-btn{font-weight:600;font-size:12px;text-decoration:none;color:#cfd6e4;border:1px solid var(--line);padding:5px 10px;border-radius:999px;white-space:nowrap}.guide-btn:hover{background:#262a30}
@@ -196,8 +196,10 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
     <div class="tabs" id="baseTabs"></div>
     <div class="pz">
       <div class="tabs" id="tabs"></div>
+      <div class="pzc"><label for="colorStops">Color stops
+        <select id="colorStops"><option value="">All</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
       <label for="pictureStops">Picture zone ±
-        <input id="pictureStops" type="number" min="0" max="4" step="0.5"> stops</label>
+        <input id="pictureStops" type="number" min="0" max="4" step="0.5"> stops</label></div>
     </div>
     <div class="big" id="big"></div>
     <div class="preview">
@@ -390,6 +392,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
     if (!noFloor) { num(p.dr2, 'Range at SNR 2', 1, 20); num(p.dr1, 'Range at SNR 1', 1, 20); }
     num(p.greyBand, 'Gray band', 0.02, 1);
     if (p.pictureStops != null) num(p.pictureStops, 'Picture zone', 0, 4);
+    if (p.colorStops != null && !(Number.isInteger(p.colorStops) && p.colorStops >= 0 && p.colorStops <= 8)) e.push('Color stops must be 0 to 8.');
     if (e.length) return e;
     if (p.greyCV >= p.clipCV) e.push('Middle gray must be below the clip level.');
     if (!noFloor && p.dr1 < p.dr2) e.push('Range at SNR 1 must be at least the range at SNR 2.');
@@ -431,8 +434,10 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
     const band = p.greyBand;
     // Keep at least `pic` stops either side of gray as picture (never less than the gray band itself).
     const pic = Math.max(band, p.pictureStops == null ? 1 : p.pictureStops);
-    const nHi = Math.max(0, Math.min(PALETTE.hi.length, Math.floor(over - pic + 1e-9)));
-    const nLo = noFloor ? 0 : Math.max(0, Math.min(PALETTE.lo.length, Math.floor(under2 - pic + 1e-9)));
+    // Optional cap on colored stops at each end (counted down from clip and up from the floor); the rest is picture.
+    const cap = p.colorStops == null ? Infinity : p.colorStops;
+    const nHi = Math.max(0, Math.min(PALETTE.hi.length, cap, Math.floor(over - pic + 1e-9)));
+    const nLo = noFloor ? 0 : Math.max(0, Math.min(PALETTE.lo.length, cap, Math.floor(under2 - pic + 1e-9)));
     const cv = l => C.enc(l) * 1023;
     const zones = [];
     const add = (kind, n, label, loLin, hiLin, color) => zones.push({ kind, n, label, loLin, hiLin, loCV: loLin === -Infinity ? 0 : cv(loLin), hiCV: hiLin === Infinity ? 1023 : cv(hiLin), color });
@@ -584,7 +589,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
 ${C.verified ? '' : '<p class="w">This log curve formula is not yet checked against the maker\'s document. Verify zones before relying on them.</p>'}
 <h2>Profile</h2>
 ${p.signal ? `<p class="w"><b>Measured on:</b> ${esc(p.signal)}</p>` : ''}
-<table><tr><th>Clip at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Middle gray at base ISO</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured (no shadow colors)</td></tr>' : `<tr><th>Range below clip, SNR 2 / SNR 1</th><td>${p.dr2} / ${p.dr1} stops</td></tr>`}<tr><th>ISO behavior</th><td>${ISO_MODES[isoModeOf(p)]}</td></tr><tr><th>Gray band</th><td>± ${p.greyBand.toFixed(2)} stop</td></tr><tr><th>Picture zone</th><td>± ${(p.pictureStops == null ? 1 : p.pictureStops)} stop</td></tr></table>
+<table><tr><th>Clip at base ISO</th><td>${f0(p.clipCV)} (full range, 10-bit)</td></tr><tr><th>Middle gray at base ISO</th><td>${f0(p.greyCV)}</td></tr>${p.floorKnown === false ? '<tr><th>Noise floor</th><td>Not measured (no shadow colors)</td></tr>' : `<tr><th>Range below clip, SNR 2 / SNR 1</th><td>${p.dr2} / ${p.dr1} stops</td></tr>`}<tr><th>ISO behavior</th><td>${ISO_MODES[isoModeOf(p)]}</td></tr><tr><th>Gray band</th><td>± ${p.greyBand.toFixed(2)} stop</td></tr><tr><th>Picture zone</th><td>± ${(p.pictureStops == null ? 1 : p.pictureStops)} stop</td></tr>${p.colorStops == null ? '' : `<tr><th>Color stops</th><td>${p.colorStops} at each end</td></tr>`}</table>
 <h2>Headroom by ISO</h2>
 <table><tr><th>ISO</th><th>Clip (CV)</th><th>Gray (CV)</th><th>Over gray</th><th>Under gray to SNR 2</th><th>to SNR 1</th><th>LUT clip color starts (${p.lutSize}-pt)</th></tr>${rows}</table>
 <p>Base ISO row measured; others calculated from the ISO behavior.</p>
@@ -851,7 +856,7 @@ var FCG_CATALOG = [
 'use strict';
 const $ = id => document.getElementById(id);
 const DB = (typeof FCG_CAMERAS !== 'undefined' ? FCG_CAMERAS : []);
-const DEFAULTS = {greyBand:0.17, pictureStops:1, lutSize:33, conservativeClip:true, inputLegal:false};
+const DEFAULTS = {greyBand:0.17, pictureStops:1, colorStops:null, lutSize:33, conservativeClip:true, inputLegal:false};
 const DATA_IDS = ['makeSel','modelSel','make','model','curve','baseISO','isoMode','clipMax','clipOf','dr2','dr1','noFloor','clipManual','clipCV','clipRange','greyCV','greyRange'];
 const KEY = 'fcg.state.v2';
 let activeISO = null;
@@ -990,7 +995,7 @@ function setData(p){
   activeISO=null; update();
 }
 function setOptions(o){
-  $('greyBand').value=o.greyBand; $('pictureStops').value=o.pictureStops; $('lutSize').value=String(o.lutSize);
+  $('greyBand').value=o.greyBand; $('pictureStops').value=o.pictureStops; $('colorStops').value=o.colorStops==null?'':String(o.colorStops); $('lutSize').value=String(o.lutSize);
   $('conservativeClip').checked=o.conservativeClip!==false; $('inputLegal').checked=!!o.inputLegal;
 }
 const num = id => { const v=parseFloat($(id).value); return isFinite(v)?v:NaN; };
@@ -1008,7 +1013,7 @@ function readForm(){
     isoList:$('isoList').value.split(/[,\s]+/).filter(Boolean).map(Number),
     isoMode:$('isoMode').value,
     clipCV, greyCV:toFull(num('greyCV'),'greyRange'), dr2:num('dr2'), dr1:num('dr1'), floorKnown:!$('noFloor').checked,
-    greyBand:num('greyBand'), pictureStops:num('pictureStops'), lutSize:parseInt($('lutSize').value,10),
+    greyBand:num('greyBand'), pictureStops:num('pictureStops'), colorStops:$('colorStops').value===''?null:parseInt($('colorStops').value,10), lutSize:parseInt($('lutSize').value,10),
     conservativeClip:$('conservativeClip').checked, inputLegal:$('inputLegal').checked
   };
 }
@@ -1126,7 +1131,7 @@ async function saveFile(filename, u8){
 function exportProfiles(){
   const cur=readForm(), ci=$('camSel').value;
   if(ci==='custom' || !DB[ci]) return [cur];
-  const opt={greyBand:cur.greyBand, pictureStops:cur.pictureStops, lutSize:cur.lutSize, conservativeClip:cur.conservativeClip, inputLegal:cur.inputLegal, credit:cur.credit, signal:cur.signal};
+  const opt={greyBand:cur.greyBand, pictureStops:cur.pictureStops, colorStops:cur.colorStops, lutSize:cur.lutSize, conservativeClip:cur.conservativeClip, inputLegal:cur.inputLegal, credit:cur.credit, signal:cur.signal};
   return DB[ci].circuits.map((k,i)=> String(i)===$('circSel').value ? cur : Object.assign(fromDB(+ci,i), opt));
 }
 function describeExports(){
