@@ -786,11 +786,11 @@ var FCG_CAMERAS = [
     signal: 'Legal-range S-Log3 on the camera SDI output with a null LUT loaded (captured in Livegrade, legal input). Without a LUT the SDI output is full range and does not change with ISO, so these LUTs are only for the null-LUT setup.',
     circuits: [
       { name: 'Base ISO 500', baseISO: 500, isos: [500], isoMode: 'none',
-        clipCV: 887, grayCV: 445,
-        sources: { range: 'Clip measured on this output (hard pile-up at 887 full range, about 824 on a legal waveform). No noise data.', gray: 'Metered 18% gray card at EI 500, 2026-11-13', iso: 'Records at base ISO; EI is not baked in. Clip and gray did not change with EI on this output, so one LUT covers EI 125 to 2000.' } },
+        clipCV: 887, dr2: 13.0, dr1: 14.1, grayCV: 445,
+        sources: { range: 'Clip measured on this output (hard pile-up at 887 full range, about 824 on a legal waveform). Noise floor from the author\'s own test, 2026-11-25: gray card stepped down one stop at a time with ND, recorded X-OCN XT at EI 500 after black balance, 16-bit 1:1 crops. Read noise plus shot noise fit across all frames, scaled to a 1080 picture to match OmniScope. Not an Imatest measurement, so not directly comparable to the CineD cameras. Assumes the X-OCN file clips at 887 like this output (not yet checked).', gray: 'Metered 18% gray card at EI 500, 2026-11-13', iso: 'Records at base ISO; EI is not baked in. Clip and gray did not change with EI on this output, so one LUT covers EI 125 to 2000.' } },
       { name: 'Base ISO 2500', baseISO: 2500, isos: [2500], isoMode: 'none',
-        clipCV: 887, grayCV: 426,
-        sources: { range: 'Clip measured on this output (hard pile-up at 887 full range, about 824 on a legal waveform). No noise data.', gray: 'Metered 18% gray card at EI 2500, 2026-11-13', iso: 'Records at base ISO; EI is not baked in. Checked at EI 2500 and 4000: clip stayed at 887 and gray barely moved, so one LUT covers EI 640 to 10000.' } }
+        clipCV: 887, dr2: 12.8, dr1: 13.9, grayCV: 426,
+        sources: { range: 'Clip measured on this output (hard pile-up at 887 full range, about 824 on a legal waveform). Noise floor from the author\'s own test, 2026-11-25: gray card stepped down one stop at a time with ND, recorded X-OCN XT at EI 2500 after black balance, 16-bit 1:1 crops. Read noise plus shot noise fit across all frames, scaled to a 1080 picture to match OmniScope. Not an Imatest measurement, so not directly comparable to the CineD cameras. Assumes the X-OCN file clips at 887 like this output (not yet checked).', gray: 'Metered 18% gray card at EI 2500, 2026-11-13', iso: 'Records at base ISO; EI is not baked in. Checked at EI 2500 and 4000: clip stayed at 887 and gray barely moved, so one LUT covers EI 640 to 10000.' } }
     ]
   }
 ];

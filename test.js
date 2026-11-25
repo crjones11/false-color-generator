@@ -146,7 +146,10 @@ ok(F.validate(Object.assign({}, zr, { dr1: 9 })).length > 0, 'SNR1 < SNR2 reject
     if (cam.signal) ok(/Measured on/.test(F.makeReport(p, [m], {})), 'report shows signal note');
   }
   const v = DB.find(c => c.model === 'VENICE'); const p = { curve: 'slog3' };
-  near(Math.log2(F.CURVES.slog3.lin(887 / 1023) / F.CURVES.slog3.lin(426 / 1023)), 5.94, 0.02, 'Venice 2500: +5.9 over gray'); }
+  near(Math.log2(F.CURVES.slog3.lin(887 / 1023) / F.CURVES.slog3.lin(426 / 1023)), 5.94, 0.02, 'Venice 2500: +5.9 over gray');
+  for (const [i, d2, d1] of [[0, 13.0, 14.1], [1, 12.8, 13.9]]) { const k = v.circuits[i]; ok(k.dr2 === d2 && k.dr1 === d1, `Venice ${k.name}: own-test floor ${d2}/${d1}`); }
+  // floor sits about 7.3 / 6.9 stops under the SDI gray (dr minus stops from gray to clip)
+  near(13.0 - Math.log2(F.CURVES.slog3.lin(887 / 1023) / F.CURVES.slog3.lin(445 / 1023)), 7.32, 0.03, 'Venice 500: SNR 2 floor 7.3 under gray'); }
 // OmniScope export across bases, one preset per distinct zone set
 { const DB = require('./cameras.js'), prof = (cam, k) => ({ make: cam.make, model: cam.model, curve: cam.curve, baseISO: k.baseISO, isoList: k.isos, isoMode: k.isoMode, clipCV: k.clipMax ? k.clipMax / k.clipOf * 1023 : k.clipCV, greyCV: k.grayCV, dr2: k.dr2, dr1: k.dr1, floorKnown: k.dr2 != null, greyBand: 0.17, pictureStops: 1, lutSize: 33, conservativeClip: true });
   const zrc = DB.find(c => c.model === 'ZR'), ven = DB.find(c => c.model === 'VENICE');
