@@ -131,7 +131,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
   <details class="box">
     <summary>Options</summary>
     <div class="row">
-      <div><label for="greyBand"><span class="sw" style="background:#00b050;width:14px;height:10px;margin-right:5px"></span>Middle gray band: <b id="greyBandOut"></b></label><input id="greyBand" type="range" min="0" max="1" step="0.01" class="slider"></div>
+      <div><label for="greyBand"><span class="sw" style="background:#00b050;width:14px;height:10px;margin-right:5px"></span>Middle gray band: <b id="greyBandOut"></b></label><input id="greyBand" title="Double-click to reset to ± 0.17" type="range" min="0" max="1" step="0.01" class="slider"></div>
       <div><label for="lutSize">LUT size</label><select id="lutSize"><option value="33">33 (cameras)</option><option value="65">65 (software)</option><option value="17">17</option></select></div>
     </div>
     <label class="check"><input type="checkbox" id="conservativeClip"><span>LUT: start clip color at the grid point below clip (never late)</span></label>
@@ -991,6 +991,7 @@ function setData(p){
 }
 function showBand(){ const v=+$('greyBand').value; $('greyBandOut').textContent= v>0 ? '± '+v.toFixed(2)+' stop' : 'off'; }
 $('greyBand').addEventListener('input', showBand);
+$('greyBand').addEventListener('dblclick', ()=>{ $('greyBand').value=DEFAULTS.greyBand; showBand(); update(); });
 function setOptions(o){
   $('greyBand').value=o.greyBand; showBand(); $('pictureStops').value=o.pictureStops; $('colorStops').value=o.colorStops==null?'':String(o.colorStops); $('lutSize').value=String(o.lutSize);
   $('conservativeClip').checked=o.conservativeClip!==false; $('inputLegal').checked=!!o.inputLegal;
