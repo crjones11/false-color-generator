@@ -131,7 +131,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
   <details class="box">
     <summary>Options</summary>
     <div class="row">
-      <div><label for="greyBand">Gray band (± stops)</label><input id="greyBand" inputmode="decimal"></div>
+      <div><label for="greyBand">Gray band (± stops)</label><input id="greyBand" type="number" min="0.02" max="1" step="0.01" inputmode="decimal"></div>
       <div><label for="lutSize">LUT size</label><select id="lutSize"><option value="33">33 (cameras)</option><option value="65">65 (software)</option><option value="17">17</option></select></div>
     </div>
     <label class="check"><input type="checkbox" id="conservativeClip"><span>LUT: start clip color at the grid point below clip (never late)</span></label>
@@ -388,7 +388,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
     num(p.greyCV, 'Middle gray', 1, 1022);
     const noFloor = p.floorKnown === false;
     if (!noFloor) { num(p.dr2, 'Range at SNR 2', 1, 20); num(p.dr1, 'Range at SNR 1', 1, 20); }
-    num(p.greyBand, 'Gray band half-width', 0.02, 1);
+    num(p.greyBand, 'Gray band', 0.02, 1);
     if (p.pictureStops != null) num(p.pictureStops, 'Picture zone', 0, 4);
     if (e.length) return e;
     if (p.greyCV >= p.clipCV) e.push('Middle gray must be below the clip level.');
@@ -1098,6 +1098,10 @@ document.querySelectorAll('input,select').forEach(n=>{
   const h=()=>{ if(DATA_IDS.includes(n.id) && $('camSel').value!=='custom'){ $('camSel').value='custom'; fillCircuits('custom'); } update(); };
   n.addEventListener('input', h);
 });
+// Range-limited fields: cap above max at once, raise below min when the field is left (so typing 0.5 isn't cut off at the 0).
+['greyBand','pictureStops'].forEach(id=>{ const n=$(id), lo=+n.min, hi=+n.max;
+  n.addEventListener('input',()=>{ const v=parseFloat(n.value); if(v>hi){ n.value=hi; update(); } });
+  n.addEventListener('change',()=>{ const v=parseFloat(n.value); if(!isFinite(v)) n.value=DEFAULTS[id]; else if(v<lo) n.value=lo; update(); }); });
 $('copyEntry').addEventListener('click', async ()=>{
   const t=$('dbEntry'); let ok=false;
   try{ await navigator.clipboard.writeText(t.value); ok=true; }catch(e){ t.focus(); t.select(); }

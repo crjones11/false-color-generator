@@ -171,7 +171,7 @@
     num(p.greyCV, 'Middle gray', 1, 1022);
     const noFloor = p.floorKnown === false;
     if (!noFloor) { num(p.dr2, 'Range at SNR 2', 1, 20); num(p.dr1, 'Range at SNR 1', 1, 20); }
-    num(p.greyBand, 'Gray band half-width', 0.02, 1);
+    num(p.greyBand, 'Gray band', 0.02, 1);
     if (p.pictureStops != null) num(p.pictureStops, 'Picture zone', 0, 4);
     if (e.length) return e;
     if (p.greyCV >= p.clipCV) e.push('Middle gray must be below the clip level.');
