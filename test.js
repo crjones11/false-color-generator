@@ -69,6 +69,12 @@ near(m800.zones[1].loCV, 723.0, 0.2, 'first highlight edge');
   ok(Math.abs(c3.zones.find(z => z.kind === 'mid' && z.n === 0).hiLin - c3.clipLin / 8) < 1e-12, 'picture starts 3 stops under clip');
   ok(F.validate(Object.assign({}, v, { colorStops: 9 })).length > 0 && F.validate(Object.assign({}, v, { colorStops: 3 })).length === 0, 'color stops validated');
   const pr = F.makeReport(Object.assign({}, v, { colorStops: 3 }), [c3], {}); ok(/Color stops/.test(pr), 'report lists color stops'); }
+// Gray band 0: no green zone, no green pixels, zones still tile without gaps
+{ const v = { make: 'Sony', model: 'VENICE', curve: 'slog3', baseISO: 500, clipCV: 887, greyCV: 445, dr2: 13.0, dr1: 14.1, isoList: [500], isoMode: 'none', greyBand: 0, pictureStops: 1, lutSize: 33, conservativeClip: true };
+  ok(F.validate(v).length === 0, 'gray band 0 is valid'); const m = F.buildModel(v, 500);
+  ok(!m.zones.some(z => z.kind === 'grey'), 'no gray zone at band 0');
+  const zs = m.zones.slice().sort((a, b) => a.loLin - b.loLin); ok(zs.every((z, i) => !i || Math.abs(z.loLin - zs[i - 1].hiLin) < 1e-12), 'zones tile at band 0');
+  const g = F.CURVES.slog3.enc(m.greyLin), px = F.classify(m, g, g, g, 2); ok(!(px[0] === 0 && px[1] > 0.6 && px[2] > 0.2 && px[2] < 0.4), 'gray card pixel not green at band 0'); }
 // 4. Classification
 const C = F.CURVES.log3g10, e = l => C.enc(l), T = F.clipThreshold(m800, 1024, false);
 const grey = v => F.classify(m800, v, v, v, T), same = (a, b) => a.every((x, i) => Math.abs(x - b[i]) < 1e-9);

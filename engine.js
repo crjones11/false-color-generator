@@ -171,7 +171,7 @@
     num(p.greyCV, 'Middle gray', 1, 1022);
     const noFloor = p.floorKnown === false;
     if (!noFloor) { num(p.dr2, 'Range at SNR 2', 1, 20); num(p.dr1, 'Range at SNR 1', 1, 20); }
-    num(p.greyBand, 'Gray band', 0.02, 1);
+    num(p.greyBand, 'Gray band', 0, 1);
     if (p.pictureStops != null) num(p.pictureStops, 'Picture zone', 0, 4);
     if (p.colorStops != null && !(Number.isInteger(p.colorStops) && p.colorStops >= 0 && p.colorStops <= 8)) e.push('Color stops must be 0 to 8.');
     if (e.length) return e;
@@ -227,7 +227,7 @@
     const gUp = greyLin * Math.pow(2, band), gDn = greyLin / Math.pow(2, band);
     const midTop = clipLin / Math.pow(2, nHi), midBot = floor2Lin * Math.pow(2, nLo);
     if (midTop > gUp) add('mid', 0, 'Picture (above gray)', gUp, midTop, null);
-    add('grey', 0, 'Middle gray', Math.max(gDn, midBot), Math.min(gUp, midTop), PALETTE.grey);
+    if (band > 0) add('grey', 0, 'Middle gray', Math.max(gDn, midBot), Math.min(gUp, midTop), PALETTE.grey);
     if (gDn > midBot) add('mid', 1, noFloor ? 'Picture (no noise data)' : 'Picture (below gray)', midBot, gDn, null);
     for (let i = nLo; i >= 1; i--) add('lo', i, `${i - 1} to ${i} stop${i > 1 ? 's' : ''} above floor`, floor2Lin * Math.pow(2, i - 1), floor2Lin * Math.pow(2, i), PALETTE.lo[i - 1]);
     if (!noFloor) {
@@ -267,7 +267,7 @@
       const u = log2(yLin / model.floor2Lin);
       if (u < model.nLo) return ZC.lo[Math.max(0, Math.floor(u))];
     }
-    if (Math.abs(log2(yLin / model.greyLin)) <= model.band) return ZC.grey;
+    if (model.band > 0 && Math.abs(log2(yLin / model.greyLin)) <= model.band) return ZC.grey;
     const v = Math.min(1, Math.max(0, Y));
     return [v, v, v];
   }

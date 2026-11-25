@@ -47,7 +47,7 @@ button.primary:disabled{opacity:.45;cursor:not-allowed}
 .strip div{position:absolute;left:0;right:0}
 .tick{position:absolute;left:-44px;width:40px;text-align:right;font-size:11px;color:var(--dim);transform:translateY(50%)}
 .tick::after{content:"";position:absolute;right:-5px;top:50%;width:4px;border-top:1px solid var(--dim)}
-.mark{position:absolute;left:0;right:-8px;border-top:1px dashed #fff;pointer-events:none}
+.mark{position:absolute;left:0;right:0;border-top:1px dashed #fff;pointer-events:none}.mark span{position:absolute;right:3px;top:1px;font-size:10px;line-height:1;color:#fff;text-shadow:0 0 2px #000,0 0 2px #000}
 table{border-collapse:collapse;width:100%;font-size:13px}
 th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--dim);font-weight:600;font-size:12px}
@@ -132,7 +132,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
   <details class="box">
     <summary>Options</summary>
     <div class="row">
-      <div><label for="greyBand"><span class="sw" style="background:#00b050;width:14px;height:10px;margin-right:5px"></span>Middle gray band: <b id="greyBandOut"></b></label><input id="greyBand" type="range" min="0.05" max="1" step="0.01" class="slider"></div>
+      <div><label for="greyBand"><span class="sw" style="background:#00b050;width:14px;height:10px;margin-right:5px"></span>Middle gray band: <b id="greyBandOut"></b></label><input id="greyBand" type="range" min="0" max="1" step="0.01" class="slider"></div>
       <div><label for="lutSize">LUT size</label><select id="lutSize"><option value="33">33 (cameras)</option><option value="65">65 (software)</option><option value="17">17</option></select></div>
     </div>
     <label class="check"><input type="checkbox" id="conservativeClip"><span>LUT: start clip color at the grid point below clip (never late)</span></label>
@@ -391,7 +391,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
     num(p.greyCV, 'Middle gray', 1, 1022);
     const noFloor = p.floorKnown === false;
     if (!noFloor) { num(p.dr2, 'Range at SNR 2', 1, 20); num(p.dr1, 'Range at SNR 1', 1, 20); }
-    num(p.greyBand, 'Gray band', 0.02, 1);
+    num(p.greyBand, 'Gray band', 0, 1);
     if (p.pictureStops != null) num(p.pictureStops, 'Picture zone', 0, 4);
     if (p.colorStops != null && !(Number.isInteger(p.colorStops) && p.colorStops >= 0 && p.colorStops <= 8)) e.push('Color stops must be 0 to 8.');
     if (e.length) return e;
@@ -447,7 +447,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
     const gUp = greyLin * Math.pow(2, band), gDn = greyLin / Math.pow(2, band);
     const midTop = clipLin / Math.pow(2, nHi), midBot = floor2Lin * Math.pow(2, nLo);
     if (midTop > gUp) add('mid', 0, 'Picture (above gray)', gUp, midTop, null);
-    add('grey', 0, 'Middle gray', Math.max(gDn, midBot), Math.min(gUp, midTop), PALETTE.grey);
+    if (band > 0) add('grey', 0, 'Middle gray', Math.max(gDn, midBot), Math.min(gUp, midTop), PALETTE.grey);
     if (gDn > midBot) add('mid', 1, noFloor ? 'Picture (no noise data)' : 'Picture (below gray)', midBot, gDn, null);
     for (let i = nLo; i >= 1; i--) add('lo', i, `${i - 1} to ${i} stop${i > 1 ? 's' : ''} above floor`, floor2Lin * Math.pow(2, i - 1), floor2Lin * Math.pow(2, i), PALETTE.lo[i - 1]);
     if (!noFloor) {
@@ -487,7 +487,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
       const u = log2(yLin / model.floor2Lin);
       if (u < model.nLo) return ZC.lo[Math.max(0, Math.floor(u))];
     }
-    if (Math.abs(log2(yLin / model.greyLin)) <= model.band) return ZC.grey;
+    if (model.band > 0 && Math.abs(log2(yLin / model.greyLin)) <= model.band) return ZC.grey;
     const v = Math.min(1, Math.max(0, Y));
     return [v, v, v];
   }
@@ -995,7 +995,7 @@ function setData(p){
   $('greyCV').value=p.greyCV; $('greyRange').value='full'; $('dr2').value=isFinite(p.dr2)?p.dr2:''; $('dr1').value=isFinite(p.dr1)?p.dr1:''; $('noFloor').checked=p.floorKnown===false;
   activeISO=null; update();
 }
-function showBand(){ $('greyBandOut').textContent='± '+(+$('greyBand').value).toFixed(2)+' stop'; }
+function showBand(){ const v=+$('greyBand').value; $('greyBandOut').textContent= v>0 ? '± '+v.toFixed(2)+' stop' : 'off'; }
 $('greyBand').addEventListener('input', showBand);
 function setOptions(o){
   $('greyBand').value=o.greyBand; showBand(); $('pictureStops').value=o.pictureStops; $('colorStops').value=o.colorStops==null?'':String(o.colorStops); $('lutSize').value=String(o.lutSize);
@@ -1074,7 +1074,7 @@ function render(p, models){
   });
   for(let cv=0; cv<=1023; cv+= (cv===896?127:128)){ const t=el('div',{class:'tick'},String(cv)); t.style.bottom=pct(cv)+'%'; wrap.appendChild(t); }
   const thr = FCG.clipThreshold(m, p.lutSize, p.conservativeClip)*1023;
-  if(false){ const mk=el('div',{class:'mark',title:'Clip color starts here in the LUT'}); mk.style.bottom=pct(thr)+'%'; wrap.appendChild(mk); }
+  if(thr < m.clipCV - 0.5){ const mk=el('div',{class:'mark',title:`${p.lutSize}-point LUT: clip color starts at ${Math.round(thr)}`}); mk.appendChild(el('span',null,`LUT ${p.lutSize}`)); mk.style.bottom=pct(thr)+'%'; wrap.appendChild(mk); }
   // legend
   const hr=el('tr'); ['','Zone','Code values','Stops from gray'].forEach((h,i)=>hr.appendChild(el('th',i>1?{class:'num'}:null,h))); legend.appendChild(hr);
   const sv = l => { const s=Math.log2(l/m.greyLin); return (s>=0?'+':'')+s.toFixed(1); };
