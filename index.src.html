@@ -16,6 +16,7 @@ main{display:grid;grid-template-columns:minmax(320px,440px) 1fr;gap:20px;max-wid
 section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
 h2{font-size:12px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);margin:0 0 10px;font-weight:600}
 label{display:block;font-size:12px;color:var(--dim);margin-bottom:3px}
+input.slider{padding:0;border:0;background:none;accent-color:var(--ok);height:34px}
 input,select{width:100%;background:var(--field);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px 9px;font:inherit}
 input:focus,select:focus{outline:2px solid #4a7dff;outline-offset:-1px}
 input.bad{border-color:var(--accent)}
@@ -131,7 +132,7 @@ button.second{width:100%;padding:9px 14px;font-weight:600}
   <details class="box">
     <summary>Options</summary>
     <div class="row">
-      <div><label for="greyBand">Gray band (± stops)</label><input id="greyBand" type="number" min="0.02" max="1" step="0.01" inputmode="decimal"></div>
+      <div><label for="greyBand">Gray band: <b id="greyBandOut"></b></label><input id="greyBand" type="range" min="0.05" max="1" step="0.01" class="slider"></div>
       <div><label for="lutSize">LUT size</label><select id="lutSize"><option value="33">33 (cameras)</option><option value="65">65 (software)</option><option value="17">17</option></select></div>
     </div>
     <label class="check"><input type="checkbox" id="conservativeClip"><span>LUT: start clip color at the grid point below clip (never late)</span></label>
@@ -365,8 +366,10 @@ function setData(p){
   $('greyCV').value=p.greyCV; $('greyRange').value='full'; $('dr2').value=isFinite(p.dr2)?p.dr2:''; $('dr1').value=isFinite(p.dr1)?p.dr1:''; $('noFloor').checked=p.floorKnown===false;
   activeISO=null; update();
 }
+function showBand(){ $('greyBandOut').textContent='± '+(+$('greyBand').value).toFixed(2)+' stop'; }
+$('greyBand').addEventListener('input', showBand);
 function setOptions(o){
-  $('greyBand').value=o.greyBand; $('pictureStops').value=o.pictureStops; $('colorStops').value=o.colorStops==null?'':String(o.colorStops); $('lutSize').value=String(o.lutSize);
+  $('greyBand').value=o.greyBand; showBand(); $('pictureStops').value=o.pictureStops; $('colorStops').value=o.colorStops==null?'':String(o.colorStops); $('lutSize').value=String(o.lutSize);
   $('conservativeClip').checked=o.conservativeClip!==false; $('inputLegal').checked=!!o.inputLegal;
 }
 const num = id => { const v=parseFloat($(id).value); return isFinite(v)?v:NaN; };
@@ -475,7 +478,7 @@ document.querySelectorAll('input,select').forEach(n=>{
   n.addEventListener('input', h);
 });
 // Range-limited fields: cap above max at once, raise below min when the field is left (so typing 0.5 isn't cut off at the 0).
-['greyBand','pictureStops'].forEach(id=>{ const n=$(id), lo=+n.min, hi=+n.max;
+['pictureStops'].forEach(id=>{ const n=$(id), lo=+n.min, hi=+n.max;
   n.addEventListener('input',()=>{ const v=parseFloat(n.value); if(v>hi){ n.value=hi; update(); } });
   n.addEventListener('change',()=>{ const v=parseFloat(n.value); if(!isFinite(v)) n.value=DEFAULTS[id]; else if(v<lo) n.value=lo; update(); }); });
 $('copyEntry').addEventListener('click', async ()=>{
