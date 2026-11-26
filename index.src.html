@@ -54,7 +54,6 @@ th{color:var(--dim);font-weight:600;font-size:12px}
 .sw{display:inline-block;width:26px;height:13px;border-radius:2px;border:1px solid #000;vertical-align:middle}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .big{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:12px}
-#legend tr.grp td{padding:10px 4px 3px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);border-bottom:0}
 .big span.sm{display:none}
 .big div b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
 .big div span{font-size:12px;color:var(--dim)}
@@ -444,11 +443,8 @@ function render(p, models){
   if(thr < m.clipCV - 0.5){ const mk=el('div',{class:'mark',title:`${p.lutSize}-point LUT: clip color starts at ${Math.round(thr)}`}); mk.appendChild(el('span',null,`LUT ${p.lutSize}`)); mk.style.bottom=pct(thr)+'%'; wrap.appendChild(mk); }
   // legend
   const hr=el('tr'); ['','Zone','Code values','Stops from gray'].forEach((h,i)=>hr.appendChild(el('th',i>1?{class:i===2?'num cv':'num'}:null,h))); legend.appendChild(hr);
-  const grp=t=>{ const tr=el('tr',{class:'grp'}); tr.appendChild(el('td')); const td=el('td',null,t); td.colSpan=3; tr.appendChild(td); legend.appendChild(tr); };
-  let lastKind='';
   const sv = l => { const s=Math.log2(l/m.greyLin); return (s>=0?'+':'')+s.toFixed(1); };
   m.zones.forEach(z=>{
-    if(z.kind!==lastKind){ if(z.kind==='hi') grp('Stops below clip'); if(z.kind==='lo') grp('Stops above noise floor'); } lastKind=z.kind;
     const tr=el('tr'), td=el('td'), sw=el('span',{class:'sw'}); sw.style.background=z.color||'linear-gradient(#bbb,#555)'; td.appendChild(sw); tr.appendChild(td);
     { const full = (z.kind==='hi'||z.kind==='lo') ? z.label.replace(/^(\d+) to (\d+) stops? .*/,'$1–$2') : z.label, short=full.replace(/^Picture.*/,'Picture').replace('Below noise floor','Below floor').replace('Noisy (SNR 1 to 2)','Noisy');
       const td2=el('td'); td2.appendChild(el('span',{class:'lg'},full)); td2.appendChild(el('span',{class:'sm'},short)); tr.appendChild(td2); }
