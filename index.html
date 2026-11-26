@@ -12,7 +12,7 @@ header{padding:18px 24px 6px;max-width:1240px;margin:0 auto}
 h1{font-size:26px;line-height:1.15;margin:0;letter-spacing:-.2px;font-weight:700}
 header p{margin:6px 0 0;color:var(--dim);font-size:14px;max-width:640px}
 main{display:grid;grid-template-columns:minmax(320px,440px) 1fr;gap:20px;max-width:1240px;margin:0 auto;padding:14px 24px 40px}
-@media(max-width:860px){main{grid-template-columns:1fr}}
+@media(max-width:860px){main{grid-template-columns:1fr;row-gap:0}main>div:first-child{display:contents}main>div:first-child>*{order:3}main>div:first-child>section:first-child{order:1}main>div:last-child{order:2}}
 section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
 h2{font-size:12px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);margin:0 0 10px;font-weight:600}
 label{display:block;font-size:12px;color:var(--dim);margin-bottom:3px}
